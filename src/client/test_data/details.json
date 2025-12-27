@@ -1,0 +1,79 @@
+{
+    "source": null,
+    "booking": null,
+    "matched_by": {
+        "ssn": "191010101010"
+    },
+    "type": "invoice",
+    "tenant_info": "",
+    "scanning": null,
+    "sender_extra": null,
+    "support_info": null,
+    "agreement_key": null,
+    "agreement": null,
+    "payment_key": "",
+    "payment": {
+        "account": "1234567",
+        "currency": "SEK",
+        "due_date": "2024-01-01T10:10:10Z",
+        "method": "1",
+        "options": [
+            {
+                "amount": "1010",
+                "due_date": "2024-10-10T10:10:10Z",
+                "reference": "1234567890",
+                "type": "SE_OCR",
+                "option_id": "0",
+                "payable_until": "2024-10-01T00:00:00Z",
+                "last_valid_pay_date": "2024-10-01"
+            }
+        ],
+        "payable": true,
+        "reference": "1234567890",
+        "total_owed": "1010",
+        "type": "SE_OCR",
+        "supported_providers": [
+            "tink"
+        ],
+        "status": "sent",
+        "variable_amount": false,
+        "input_amount": "1010.00",
+        "last_paid_option_id": "0",
+        "pay_date": "2024-10-01",
+        "from_account_displayname": "BillyBanken",
+        "payment_status": "sent",
+        "payment_provider": "tink",
+        "last_successful_provider": "se.oneclick"
+    },
+    "client_id": "1234567890abcdef1234567890abcdef1234567890",
+    "parts": [
+        {
+            "name": "1234567890abcdef1234567890abcdef.txt",
+            "content_type": "text/plain",
+            "size": 123456,
+            "checksum": "1234567890abcdef1234567890abcdef",
+            "sha256": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            "key": "1234567890abcdef1234567890abcdef1234567890"
+        }
+    ],
+    "security_level": 25,
+    "labels": {
+        "viewed": true,
+        "trashed": false,
+        "agreement": false,
+        "paid": false,
+        "declined": false
+    },
+    "received_at": "2024-01-01T10:10:10Z",
+    "generated_at": "2024-01-01T10:10:10Z",
+    "created_at": "2024-01-01T10:10:10Z",
+    "receiver_name": "Billy-Bo Buchanan",
+    "sender_name": "SUEZ Recycling AB",
+    "subject": "Faktura från PreZero Recycling AB",
+    "receiver": "user_1234567890abcdef1234567890abcdef1234567890",
+    "sender": "tenant_1234567890abcdef1234567890abcdef1234567890",
+    "active_parts": [],
+    "terms": [],
+    "offlineable": false,
+    "tags": []
+}

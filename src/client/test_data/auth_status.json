@@ -1,0 +1,8 @@
+{
+  "status": "pending",
+  "progress_status": "outstanding_transaction",
+  "message_code": "RFA1",
+  "qr_code": "bankid.8f2b62da-8caa-4c45-a5a7-23f21ff86f94.1.20744b6256a14b6444948b6d99bae59882a1eeaaf352507ed2f3f54ba73a1d79",
+  "retry_after": 2,
+  "next_poll_url": "/v2/bankid/auth_17242357406d5e59ec38324b2b8c2ebef08e70e847?previous_retry_after=2"
+}

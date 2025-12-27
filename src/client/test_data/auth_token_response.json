@@ -1,0 +1,7 @@
+{
+  "access_token": "5e72397d45cd6eb898043373a0e31c73",
+  "expires_in": 3600,
+  "id_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsidXJuOmtpdnJhOnBsYXRmb3JtOnNlcnZpY2U6cmVjaXBpZW50LWFwaS1nYXRld2F5Il0sImF6cCI6IjA2ZWFiOTcwMDQ3NGU1OGE2YjI0N2IwMzJlNjEwMDdkMDk1ZDlmMTciLCJlbWFpbCI6ImJpbGx5Ym9iQGJ1cGtpbnMuY29tIiwiZXhwIjoxNzI0MjQwMTEyLCJmaXJzdF9uYW1lIjoiQmlsbHkgQm9iIiwiaWF0IjoxNzI0MjM2NTEyLCJpZHAiOiJiYW5raWQiLCJpc3MiOiJodHRwczovL2hlaW1kYWxsLnZiZy5wcm9kLmtpdnJhLm5ldCIsImtpdnJhX3VzZXJfaWQiOiI1YmRlODYzN2I0YmQzZDBkZGY1N2VmYTk1YWViNTgwMDQ5MWRhNDQ5Iiwia2l2cmFfdXNlcl9zZWN1cml0eV9sZXZlbCI6NTAsImtpdnJhX3VzZXJfdHlwZSI6InVzZXIiLCJsYXN0X25hbWUiOiJCdXBraW5zIiwibmFtZSI6IkJpbGx5IEJvYiIsInNzbiI6IjE5NTIwODE1MjcxMiJ9.q5ZFpjcWpaFwCTQ5et1OZeTrAV_HRuCjrR2wb9LV0eQUfXPHU-K4YXoCNyvefO_FsjUp2NYXdnHP11S1gmnlAedbqOFg25icmgBc2zPm9XZJDq_xQujhzOVdOuAkmDbKd-0cYlj89FemhLQXDJCsH0m-o3DTWVZCKRmT2d4aCj1xjTjepSIMDkf8Z79PwiAmDsj61VXqg8gxNTEqgNWvk_auibSiDRix005oqJbsUhWIMWS_yq4vowm3QwucKJw4s5YUVdAhq_8JUEPIY6KyEkXU1glUP81Oypithy6eDHuTUapn_Y3mykg3StfkXbe_zMfMkxO1Z1rbBjMI3T1riQ",
+  "scope": "openid profile *:kivra.v1.asset.** *:kivra.v1.content.** *:kivra.v1.folders.** *:kivra.v1.sender.search *:kivra.v1.tenant.search *:kivra.v1.user.5bde8637b4bd3d0ddf57efa95aeb5800491da449.** *:kivra.v2.asset.** *:kivra.v2.user.5bde8637b4bd3d0ddf57efa95aeb5800491da449.** *:kivra.v3.user.5bde8637b4bd3d0ddf57efa95aeb5800491da449.** *:kivra.v4.user.5bde8637b4bd3d0ddf57efa95aeb5800491da449.** offer post:kivra.v1.item.metadata post:kivra.v1.user.names receipt user",
+  "token_type": "bearer"
+}
