@@ -6,7 +6,6 @@ use super::model::{auth::*, content::*, Config};
 mod kivra_client;
 mod mock_client;
 pub mod session;
-// pub mod session_manager;
 
 pub use kivra_client::KivraClient;
 pub use mock_client::MockClient;

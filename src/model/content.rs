@@ -68,7 +68,7 @@ pub struct InboxEntry {
     pub item: InboxItem,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct InboxListing(Vec<InboxEntry>);
 
 impl Deref for InboxListing {
