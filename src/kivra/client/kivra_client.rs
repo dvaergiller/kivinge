@@ -112,15 +112,28 @@ impl Client for KivraClient {
         Ok(())
     }
 
-    fn get_inbox_listing(&self, session: &Session) -> Result<Vec<ContentSpec>, Error> {
+    fn get_inbox_listing(&self, session: &Session) -> Result<InboxListing, Error> {
         let user_id = &session.user_info.kivra_user_id;
-        Ok(self
+        let listing = self
             .client
             .get(format!("{API_URL}/v3/user/{user_id}/content"))
             .query(&[("listing", "all")])
             .bearer_auth(&session.access_token)
             .send()?
             .error_for_status()?
-            .json()?)
+            .json()?;
+        Ok(InboxListing::from_content_specs(listing))
+    }
+
+    fn get_item_details(&self, session: &Session, item_key: String) -> Result<ItemDetails, Error> {
+        let user_id = &session.user_info.kivra_user_id;
+        let details = self
+            .client
+            .get(format!("{API_URL}/v3/user/{user_id}/content/{item_key}"))
+            .bearer_auth(&session.access_token)
+            .send()?
+            .error_for_status()?
+            .json()?;
+        Ok(details)
     }
 }

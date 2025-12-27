@@ -8,17 +8,17 @@ use ratatui::{symbols, Frame};
 
 use crate::{
     error::Error,
-    kivra::model::{ContentDetails, ContentSpec},
+    kivra::model::{ItemDetails, InboxItem},
     terminal::LoadedTerminal,
 };
 
 pub fn show(
     terminal: &mut LoadedTerminal,
-    content_spec: &ContentSpec,
-    content_details: &ContentDetails,
+    content_spec: &InboxItem,
+    item_details: &ItemDetails,
 ) -> Result<(), Error> {
     loop {
-        render(terminal, content_spec, content_details)?;
+        render(terminal, content_spec, item_details)?;
         match read()? {
             Event::Key(key) if key.code == KeyCode::Char('q') => {
                 return Ok(());
@@ -34,8 +34,8 @@ fn indent(n: usize, s: impl Display) -> String {
 
 pub fn render(
     terminal: &mut LoadedTerminal,
-    content_spec: &ContentSpec,
-    content_details: &ContentDetails,
+    content_spec: &InboxItem,
+    content_details: &ItemDetails,
 ) -> Result<(), Error> {
     let draw = |frame: &mut Frame| {
         let main_layout = Layout::default()

@@ -1,17 +1,22 @@
 use chrono::{Local, TimeZone};
+use tabled::builder::Builder;
+use tabled::settings::Style;
 
-use crate::error::Error;
-use crate::kivra::model::ContentSpec;
+use crate::kivra::model::InboxListing;
 
-pub fn print(inbox: &Vec<ContentSpec>) -> Result<(), Error> {
-    for item in inbox {
-        let local_datetime = Local.from_utc_datetime(&item.created_at.naive_utc());
-        println!(
-            "{} - {} - {}",
-            item.sender_name,
-            item.subject,
-            local_datetime.format("%Y-%m-%d %H:%M")
-        );
+pub fn print(inbox: InboxListing) {
+    let mut builder = Builder::default();
+    builder.push_record(["Id", "Sender", "Subject", "Created At"]);
+    for entry in inbox {
+        let local_datetime = Local.from_utc_datetime(&entry.item.created_at.naive_utc())
+            .format("%Y-%m-%d %H:%M")
+            .to_string();
+        builder.push_record([
+            &entry.id.to_string(),
+            &entry.item.sender_name,
+            &entry.item.subject,
+            &local_datetime]);
     }
-    Ok(())
+    let table = builder.build().with(Style::rounded()).to_string();
+    println!("{table}");
 }

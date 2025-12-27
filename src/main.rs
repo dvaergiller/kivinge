@@ -1,6 +1,3 @@
-use crossterm::event::{read, Event, KeyCode};
-use std::{fs::File, io::Read};
-
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{
     self,
@@ -9,7 +6,7 @@ use clap_complete::{
 };
 use kivinge::kivra::{
     client::{self, Client},
-    model, session,
+    session,
 };
 use kivinge::{cli, error::Error, terminal, tui};
 
@@ -17,7 +14,7 @@ use kivinge::{cli, error::Error, terminal, tui};
 #[command(version, about, long_about = None)]
 struct CliArgs {
     #[arg(long)]
-    preview: bool,
+    mock: bool,
 
     #[command(subcommand)]
     command: Command,
@@ -35,7 +32,7 @@ enum Command {
     #[command(about = "List all items in the inbox")]
     List,
     #[command(about = "View inbox item")]
-    View { item_id: usize },
+    View { item_id: u32 },
     #[command(about = "Log out from Kivra")]
     Logout,
 }
@@ -61,10 +58,14 @@ fn generate_completions<G: Generator>(gen: G) {
 }
 
 fn run(cli_args: CliArgs) -> Result<(), Error> {
-    let client = client::KivraClient::new();
-    match cli_args.command {
-        _ if cli_args.preview => run_preview(cli_args),
+    let client: Box<dyn Client> =
+        if cli_args.mock {
+            Box::new(client::MockClient::new())
+        } else {
+            Box::new(client::KivraClient::new())
+        };
 
+    match cli_args.command {
         Command::Completions {
             shell: CompletionsShell::Bash,
         } => {
@@ -83,18 +84,23 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             generate_completions(Zsh);
             Ok(())
         }
-
         Command::Login => load_session_or_login(&client).and(Ok(())),
 
         Command::List => {
             let session = load_session_or_login(&client)?;
             let inbox = client.get_inbox_listing(&session)?;
-            cli::inbox::print(&inbox)?;
+            cli::inbox::print(inbox);
             Ok(())
         }
 
-        Command::View { item_id: _item_id } => {
-            // let session = load_session_or_login(&client)?;
+        Command::View { item_id } => {
+            let session = load_session_or_login(&client)?;
+            let inbox = client.get_inbox_listing(&session)?;
+            let entry = inbox.into_iter()
+                .find(|i| i.id == item_id)
+                .ok_or(Error::UserError(format!("Inbox item {item_id} does not exist")))?;
+            let details = client.get_item_details(&session, entry.item.key)?;
+            cli::inbox_item::print(details);
             Ok(())
         }
 
@@ -103,46 +109,6 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
                 session::try_load()?.ok_or(Error::AppError("No session found".to_string()))?;
             client.revoke_auth_token(&session)?;
             session::delete_saved()
-        }
-    }
-}
-
-fn run_preview(cli_args: CliArgs) -> Result<(), Error> {
-    let mut terminal = terminal::load()?;
-    match cli_args.command {
-        Command::Login => {
-            let mut qr_code = String::new();
-            File::open("./test_data/qrcode")?.read_to_string(&mut qr_code)?;
-            tui::login::render(&mut terminal, &qr_code)
-        }
-
-        Command::List => {
-            let file = File::open("./test_data/listing")?;
-            let listing: Vec<model::ContentSpec> = serde_json::from_reader(file)?;
-            tui::inbox::show(&mut terminal, &listing)
-        }
-
-        Command::View { item_id } => {
-            let inbox_file = File::open("./test_data/listing")?;
-            let listing: Vec<model::ContentSpec> = serde_json::from_reader(inbox_file)?;
-            let spec = listing
-                .get(item_id)
-                .ok_or(Error::AppError("Does not exist".to_string()))?;
-            let details_file = File::open("./test_data/item")?;
-            let details: model::ContentDetails = serde_json::from_reader(details_file)?;
-            tui::content::show(&mut terminal, spec, &details)?;
-            Ok(())
-        }
-
-        _ => Err(Error::AppError(
-            "There is no preview for that command".to_string(),
-        )),
-    }?;
-
-    loop {
-        match read()? {
-            Event::Key(key) if key.code == KeyCode::Char('q') => return Ok(()),
-            _ => (),
         }
     }
 }

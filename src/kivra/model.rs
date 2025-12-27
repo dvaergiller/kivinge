@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, ops::Deref};
 
 pub type UserId = String;
 
@@ -91,7 +91,7 @@ impl<'a> Deserialize<'a> for Date {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct ContentSpec {
+pub struct InboxItem {
     pub key: ContentKey,
     pub sender: SenderKey,
     pub sender_name: String,
@@ -122,8 +122,43 @@ pub struct ContentSpec {
     // pub form: //null
 }
 
+#[derive(Debug)]
+pub struct InboxEntry {
+    pub id: u32,
+    pub item: InboxItem,
+}
+
+pub struct InboxListing(Vec<InboxEntry>);
+
+impl Deref for InboxListing {
+    type Target = Vec<InboxEntry>;
+    fn deref(&self) -> &Self::Target {
+        let InboxListing(listing) = self;
+        listing
+    }
+}
+
+impl IntoIterator for InboxListing {
+    type Item = InboxEntry;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl InboxListing {
+    pub fn from_content_specs(mut vec: Vec<InboxItem>) -> InboxListing {
+        vec.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        let listing = vec.into_iter().zip(1..).map(|(item, id)| InboxEntry { id, item }).collect();
+        InboxListing(listing)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
-pub struct ContentDetails {
+pub struct ItemDetails {
+    pub subject: String,
+    pub sender_name: String,
+    pub created_at: DateTime<Utc>,
     pub parts: Vec<Attachment>,
 }
 

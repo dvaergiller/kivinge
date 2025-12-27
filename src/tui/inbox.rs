@@ -7,13 +7,13 @@ use ratatui::{
     Frame,
 };
 
-use crate::{error::Error, kivra::model::ContentSpec, terminal::LoadedTerminal};
+use crate::{error::Error, kivra::model::{InboxEntry, InboxListing}, terminal::LoadedTerminal};
 
-pub fn show(terminal: &mut LoadedTerminal, inbox: &[ContentSpec]) -> Result<(), Error> {
+pub fn show(terminal: &mut LoadedTerminal, inbox: InboxListing) -> Result<(), Error> {
     let mut widget_state = TableState::new().with_selected(0);
 
     loop {
-        render(terminal, inbox, &mut widget_state)?;
+        render(terminal, &inbox, &mut widget_state)?;
         match read()? {
             Event::Key(key) if key.code == KeyCode::Char('q') => {
                 return Ok(());
@@ -39,7 +39,7 @@ pub fn show(terminal: &mut LoadedTerminal, inbox: &[ContentSpec]) -> Result<(), 
 
 pub fn render(
     terminal: &mut LoadedTerminal,
-    inbox: &[ContentSpec],
+    inbox: &InboxListing,
     widget_state: &mut TableState,
 ) -> Result<(), Error> {
     let widget = inbox_widget(inbox);
@@ -50,7 +50,7 @@ pub fn render(
     Ok(())
 }
 
-fn inbox_widget(inbox: &[ContentSpec]) -> Table {
+fn inbox_widget(inbox: &InboxListing) -> Table<'static> {
     let rows = inbox.iter().map(inbox_row);
     let widths = [
         Constraint::Max(20),
@@ -62,11 +62,11 @@ fn inbox_widget(inbox: &[ContentSpec]) -> Table {
         .highlight_symbol(">>")
 }
 
-fn inbox_row(content_spec: &ContentSpec) -> Row {
-    let local_datetime = Local.from_utc_datetime(&content_spec.created_at.naive_utc());
+fn inbox_row(entry: &InboxEntry) -> Row<'static> {
+    let local_datetime = Local.from_utc_datetime(&entry.item.created_at.naive_utc());
     let cells = [
-        content_spec.sender_name.clone(),
-        content_spec.subject.clone(),
+        entry.item.sender_name.clone(),
+        entry.item.subject.clone(),
         local_datetime.format("%Y-%m-%d %H:%M").to_string(),
     ];
     Row::new(cells)

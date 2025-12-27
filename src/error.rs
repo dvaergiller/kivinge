@@ -22,4 +22,7 @@ pub enum Error {
 
     #[error("Application error - {0}")]
     AppError(String),
+
+    #[error("User error - {0}")]
+    UserError(String),
 }
