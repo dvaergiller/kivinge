@@ -1,5 +1,5 @@
 use std::{
-    cmp::min, ops::{Shl, Shr}, path::Path, time::{Duration, UNIX_EPOCH}
+    cmp::min, ffi::OsStr, ops::{Shl, Shr}, path::Path, time::{Duration, UNIX_EPOCH}
 };
 
 use bytes::Bytes;
@@ -9,19 +9,33 @@ use fuser::{
     ReplyDirectory, Request,
 };
 use libc::{EFAULT, EINVAL, EISDIR, ENOENT, ENOTDIR};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::{
     client::Client,
     model::content::{Attachment, InboxEntry, InboxListing, ItemDetails}
 };
 
+#[derive(Debug, Clone, Copy)]
 pub enum Error {
     NotFound = ENOENT as isize,
     InternalError = EFAULT as isize,
     Invalid = EINVAL as isize,
     IsDir = EISDIR as isize,
     IsNotDir = ENOTDIR as isize,
+}
+
+impl Error {
+    fn error_code(&self) -> i32 {
+        match self {
+            Error::NotFound => debug!("not found"),
+            Error::InternalError => warn!("internal error"),
+            Error::Invalid => warn!("invalid"),
+            Error::IsDir => debug!("inode is directory"),
+            Error::IsNotDir => debug!("inode is not directory"),
+        }
+        *self as i32
+    }
 }
 
 pub fn mount(
@@ -48,6 +62,8 @@ pub fn mount(
 #[derive(Clone)]
 enum Inode {
     Root,
+    // CurrentDir,
+    // ParentDir,
     InboxEntry {
         entry: InboxEntry,
     },
@@ -63,10 +79,13 @@ impl Inode {
     fn to_u64(&self) -> u64 {
         match self {
             Inode::Root => 1,
-            Inode::InboxEntry { entry, .. } => entry.id as u64 + 1,
-            Inode::Attachment { inbox_entry_id, attachment_id, .. } => {
-                (*inbox_entry_id as u64 + 1).shl(32) + (*attachment_id as u64)
-            }
+            // Inode::CurrentDir => 1,
+            // Inode::ParentDir => 1,
+            Inode::InboxEntry { entry, .. } =>
+                (entry.id as u64 + 1).shl(32),
+            Inode::Attachment { inbox_entry_id, attachment_id, .. } =>
+                (*inbox_entry_id as u64 + 1).shl(32) +
+                (*attachment_id as u64),
         }
     }
 
@@ -81,6 +100,8 @@ impl Inode {
     fn attr(&self) -> FileAttr {
         let (kind, perm, size) = match self {
             Inode::Root => (FileType::Directory, 0o500, 0u64),
+            // Inode::CurrentDir => (FileType::Directory, 0o500, 0u64),
+            // Inode::ParentDir => (FileType::Directory, 0o500, 0u64),
             Inode::InboxEntry { .. } => {
                 (FileType::Directory, 0o500, 0u64)
             }
@@ -194,8 +215,10 @@ impl<'a, C: Client> KivraFS<'a, C> {
     }
 
     fn inode(&mut self, inode_id: u64) -> Result<Inode, Error> {
-        if inode_id == 1 {
-            return Ok(Inode::Root);
+        match inode_id {
+            // 0 => return Ok(Inode::CurrentDir),
+            1 => return Ok(Inode::Root),
+            _ => (),
         }
 
         let entry_id = Inode::entry_id(inode_id);
@@ -251,6 +274,9 @@ impl<'a, C: Client> KivraFS<'a, C> {
             Inode::Attachment { .. } => {
                 Err(Error::IsNotDir)
             }
+            // _ => {
+            //     Err(Error::Invalid)
+            // }
         }
     }
 
@@ -279,15 +305,13 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         name: &std::ffi::OsStr,
         reply: fuser::ReplyEntry,
     ) {
-        debug!("Looking up {name:?} in {parent}");
+        debug!("Looking up {name:?} in {parent:#018x}");
         match self.inode_by_name(parent, &name.to_string_lossy()) {
             Ok(inode) => {
-                debug!("Found it");
                 reply.entry(&TTL, &inode.attr(), 0);
             }
             Err(error) => {
-                debug!("Not found");
-                reply.error(error as i32);
+                reply.error(error.error_code());
             }
         }
     }
@@ -298,9 +322,10 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         ino: u64,
         reply: fuser::ReplyAttr,
     ) {
+        debug!("getattr: {ino}");
         match self.inode(ino) {
             Ok(inode) => reply.attr(&TTL, &inode.attr()),
-            Err(error) => reply.error(error as i32),
+            Err(error) => reply.error(error.error_code()),
         }
     }
 
@@ -315,10 +340,9 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         _lock: Option<u64>,
         reply: ReplyData,
     ) {
+        debug!("read: {ino}");
         match self.inode(ino) {
-            Err(error) => reply.error(error as i32),
-            Ok(Inode::Root) => reply.error(EISDIR),
-            Ok(Inode::InboxEntry { .. }) => reply.error(EISDIR),
+            Err(error) => reply.error(error.error_code()),
             Ok(Inode::Attachment { inbox_entry_id, item_key, attachment_id, .. }) => {
                 let res = self.attachment_contents(
                     inbox_entry_id,
@@ -331,8 +355,11 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                         let end = min(data.len(), start + size as usize) - 1;
                         reply.data(&data[start..end]);
                     }
-                    Err(error) => reply.error(error as i32),
+                    Err(error) => reply.error(error.error_code()),
                 }
+            }
+            Ok(_) => {
+                reply.error(Error::IsDir.error_code());
             }
         }
     }
@@ -345,41 +372,45 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         offset: i64,
         mut reply: ReplyDirectory,
     ) {
-        match self.inode_children(ino) {
-            Ok(children) => {
-                debug!("Listing directory {} with {} children from offset {}",
-                       ino,
-                       children.len(),
-                       offset);
-
-                let dotfiles = [
-                    (1, FileType::Directory, ".".to_string()),
-                    (2, FileType::Directory, "..".to_string())
-                ];
-                let direntries = children
-                    .into_iter()
-                    .map(|(name, inode)| {
-                        (inode.to_u64(), inode.attr().kind, name)
-                    });
-
-                let result = dotfiles
-                    .into_iter()
-                    .chain(direntries)
-                    .skip(offset as usize);
-
-                for (idx, (inode_id, file_type, name)) in result.enumerate() {
-                    let offs = idx as i64 + offset + 1;
-                    let full = reply.add(inode_id, offs, file_type, name);
-                    if full {
-                        break;
-                    }
-                }
-                reply.ok();
-            }
+        debug!("readdir: {ino:#018x}");
+        let children = match self.inode_children(ino) {
             Err(error) => {
-                reply.error(error as i32);
+                reply.error(error.error_code());
+                return;
+            },
+            Ok(children) => {
+                children
+            }
+        };
+
+        debug!(
+            "Listing directory {} with {} children from offset {}",
+            ino,
+            children.len(),
+            offset
+        );
+
+        let special_files = [
+            // (".".to_string(), Inode::CurrentDir),
+            // ("..".to_string(), Inode::ParentDir),
+        ];
+
+        let result = special_files
+            .into_iter()
+            .chain(children.into_iter())
+            .enumerate()
+            .skip(offset as usize);
+
+        for (idx, (name, inode)) in result {
+            let ino = inode.to_u64();
+            if reply.add(
+                ino,
+                (idx + 1) as i64,
+                inode.attr().kind,
+                OsStr::new(&name)) {
+                break;
             }
         }
-
+        reply.ok();
     }
 }
