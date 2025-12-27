@@ -1,11 +1,5 @@
 use std::{
-    cmp::min,
-    collections::HashMap,
-    ffi::OsStr,
-    fmt::{Display, Formatter},
-    ops::{Shl, Shr},
-    path::Path,
-    time::{Duration, UNIX_EPOCH},
+    cmp::min, collections::HashMap, ffi::OsStr, fmt::{Display, Formatter}, ops::{Shl, Shr}, path::Path, process, time::{Duration, UNIX_EPOCH}
 };
 
 use bytes::Bytes;
@@ -14,7 +8,7 @@ use fuser::{
     mount2, FileAttr, FileType, Filesystem, MountOption, ReplyData,
     ReplyDirectory, Request,
 };
-use libc::{EFAULT, EINVAL, EISDIR, ENOENT, ENOTDIR};
+use libc::{EFAULT, EINVAL, EIO, EISDIR, ENOENT, ENOTDIR};
 use thiserror::Error;
 use tracing::{debug, error, warn};
 
@@ -23,13 +17,16 @@ use crate::{
     model::content::{Attachment, InboxEntry, ItemDetails},
 };
 
-#[derive(Debug, Clone, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum Error {
     #[error("not found")]
     NotFound,
 
     #[error("internal error: {0}")]
     InternalError(String),
+
+    #[error("IO error")]
+    IOError(#[from] std::io::Error),
 
     #[error("invalid")]
     Invalid,
@@ -51,7 +48,12 @@ impl Error {
 
             Error::InternalError(_) => {
                 error!("{}", self);
-                EFAULT
+                process::exit(EFAULT);
+            }
+
+            Error::IOError(_) => {
+                error!("{}", self);
+                EIO
             }
 
             Error::Invalid => {
@@ -79,13 +81,14 @@ const FILESYSTEM_TTL: Duration = Duration::from_secs(60);
 pub fn mount(
     client: &mut impl Client,
     mountpoint: &Path,
-) -> Result<(), std::io::Error> {
-    let filesystem = KivraFS {
+) -> Result<(), Error> {
+    let mut filesystem = KivraFS {
         client,
         inbox_cache: TimedSizedCache::with_size_and_lifespan(1, INBOX_TTL),
         details_cache: TimedCache::with_lifespan(DETAILS_TTL),
         attachment_cache: SizedCache::with_size(10),
     };
+    _ = filesystem.inbox_index()?; // Trigger inbox listing and auth if needed
     let mount_options = [
         MountOption::FSName("kivinge".to_string()),
         MountOption::DefaultPermissions,
@@ -198,7 +201,7 @@ impl<'a, C: Client> KivraFS<'a, C> {
                     (entry.id, entry.clone())
                 })
                 .collect();
-            Ok(InboxIndex { by_name, by_id })
+            Ok::<InboxIndex, Error>(InboxIndex { by_name, by_id })
         })?;
         Ok(listing)
     }

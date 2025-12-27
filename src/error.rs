@@ -11,6 +11,9 @@ pub enum Error {
     #[error("TUI error: {0}")]
     TuiError(#[from] super::tui::Error),
 
+    #[error("FUSE error: {0}")]
+    FuseError(#[from] super::fuse::Error),
+
     #[error("IO error encountered - {0}")]
     IOError(#[from] std::io::Error),
 
