@@ -12,9 +12,10 @@ struct State {
     retry_after: u32,
 }
 
-pub fn show(terminal: &mut terminal::LoadedTerminal, client: &impl client::Client) ->
-    Result<Option<model::AuthTokenResponse>, Error>
-{
+pub fn show(
+    terminal: &mut terminal::LoadedTerminal,
+    client: &impl client::Client,
+) -> Result<Option<model::AuthTokenResponse>, Error> {
     let config = client.get_config()?;
     let (verifier, auth_resp) = client.start_auth(&config)?;
 
@@ -45,7 +46,9 @@ pub fn show(terminal: &mut terminal::LoadedTerminal, client: &impl client::Clien
                 state.retry_after = check.retry_after.unwrap_or(state.retry_after);
             }
             Some(_) => {
-                return client.get_auth_token(&config, auth_resp.code, verifier).map(Some);
+                return client
+                    .get_auth_token(&config, auth_resp.code, verifier)
+                    .map(Some);
             }
         }
     }

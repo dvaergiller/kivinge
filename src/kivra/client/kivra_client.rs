@@ -1,7 +1,7 @@
+use super::Client;
+use crate::error::Error;
 use crate::kivra::model::*;
 use crate::kivra::session::Session;
-use crate::error::Error;
-use super::Client;
 
 const API_URL: &str = "https://app.api.kivra.com";
 const ACCOUNTS_URL: &str = "https://accounts.kivra.com";
@@ -12,17 +12,26 @@ pub struct KivraClient {
 
 impl KivraClient {
     pub fn new() -> KivraClient {
-        KivraClient { client: reqwest::blocking::Client::new() }
+        KivraClient {
+            client: reqwest::blocking::Client::new(),
+        }
+    }
+}
+
+impl Default for KivraClient {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl Client for KivraClient {
     fn get_config(&self) -> Result<Config, Error> {
-        Ok(self.client
-           .get(format!("{ACCOUNTS_URL}/config.json"))
-           .send()?
-           .error_for_status()?
-           .json()?)
+        Ok(self
+            .client
+            .get(format!("{ACCOUNTS_URL}/config.json"))
+            .send()?
+            .error_for_status()?
+            .json()?)
     }
 
     fn start_auth(&self, config: &Config) -> Result<(CodeVerifier, AuthResponse), Error> {
@@ -38,7 +47,8 @@ impl Client for KivraClient {
             redirect_uri: config.oauth_default_redirect_uri.clone(),
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(format!("{API_URL}/v2/oauth2/authorize"))
             .json(&auth_request)
             .send()?
@@ -47,15 +57,16 @@ impl Client for KivraClient {
         Ok((verifier, resp))
     }
 
-    fn check_auth(&self, poll_url: &String) -> Result<AuthStatus, Error> {
-        Ok(self.client
-           .get(format!("{API_URL}{poll_url}"))
-           .send()?
-           .error_for_status()?
-           .json()?)
+    fn check_auth(&self, poll_url: &str) -> Result<AuthStatus, Error> {
+        Ok(self
+            .client
+            .get(format!("{API_URL}{poll_url}"))
+            .send()?
+            .error_for_status()?
+            .json()?)
     }
 
-    fn abort_auth(&self, poll_url: &String) -> Result<(), Error> {
+    fn abort_auth(&self, poll_url: &str) -> Result<(), Error> {
         self.client
             .delete(format!("{API_URL}{poll_url}"))
             .send()?
@@ -63,13 +74,14 @@ impl Client for KivraClient {
         Ok(())
     }
 
-    fn get_auth_token(&self,
-                      config: &Config,
-                      auth_code: String,
-                      verifier: CodeVerifier,
+    fn get_auth_token(
+        &self,
+        config: &Config,
+        auth_code: String,
+        verifier: CodeVerifier,
     ) -> Result<AuthTokenResponse, Error> {
-        let verifier_string = String::from_utf8(verifier)
-            .map_err(|e| Error::AppError(e.to_string()))?;
+        let verifier_string =
+            String::from_utf8(verifier).map_err(|e| Error::AppError(e.to_string()))?;
 
         let token_request = AuthTokenRequest {
             client_id: config.oauth_default_client_id.clone(),
@@ -79,7 +91,8 @@ impl Client for KivraClient {
             redirect_uri: config.oauth_default_redirect_uri.clone(),
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(format!("{API_URL}/v2/oauth2/token"))
             .json(&token_request)
             .send()?
@@ -101,12 +114,13 @@ impl Client for KivraClient {
 
     fn get_inbox_listing(&self, session: &Session) -> Result<Vec<ContentSpec>, Error> {
         let user_id = &session.user_info.kivra_user_id;
-        Ok(self.client
-           .get(format!("{API_URL}/v3/user/{user_id}/content"))
-           .query(&[("listing", "all")])
-           .bearer_auth(&session.access_token)
-           .send()?
-           .error_for_status()?
-           .json()?)
+        Ok(self
+            .client
+            .get(format!("{API_URL}/v3/user/{user_id}/content"))
+            .query(&[("listing", "all")])
+            .bearer_auth(&session.access_token)
+            .send()?
+            .error_for_status()?
+            .json()?)
     }
 }

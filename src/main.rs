@@ -7,7 +7,10 @@ use clap_complete::{
     shells::{Bash, PowerShell, Zsh},
     Generator,
 };
-use kivinge::kivra::{client::{self, Client}, model, session};
+use kivinge::kivra::{
+    client::{self, Client},
+    model, session,
+};
 use kivinge::{cli, error::Error, terminal, tui};
 
 #[derive(Parser, Debug)]
@@ -32,9 +35,7 @@ enum Command {
     #[command(about = "List all items in the inbox")]
     List,
     #[command(about = "View inbox item")]
-    View {
-        item_id: usize
-    },
+    View { item_id: usize },
     #[command(about = "Log out from Kivra")]
     Logout,
 }
@@ -62,15 +63,26 @@ fn generate_completions<G: Generator>(gen: G) {
 fn run(cli_args: CliArgs) -> Result<(), Error> {
     let client = client::KivraClient::new();
     match cli_args.command {
-        _ if cli_args.preview =>
-            run_preview(cli_args),
+        _ if cli_args.preview => run_preview(cli_args),
 
-        Command::Completions { shell: CompletionsShell::Bash } =>
-            Ok(generate_completions(Bash)),
-        Command::Completions { shell: CompletionsShell::PowerShell } =>
-            Ok(generate_completions(PowerShell)),
-        Command::Completions { shell: CompletionsShell::Zsh } =>
-            Ok(generate_completions(Zsh)),
+        Command::Completions {
+            shell: CompletionsShell::Bash,
+        } => {
+            generate_completions(Bash);
+            Ok(())
+        }
+        Command::Completions {
+            shell: CompletionsShell::PowerShell,
+        } => {
+            generate_completions(PowerShell);
+            Ok(())
+        }
+        Command::Completions {
+            shell: CompletionsShell::Zsh,
+        } => {
+            generate_completions(Zsh);
+            Ok(())
+        }
 
         Command::Login => load_session_or_login(&client).and(Ok(())),
 
@@ -113,20 +125,24 @@ fn run_preview(cli_args: CliArgs) -> Result<(), Error> {
         Command::View { item_id } => {
             let inbox_file = File::open("./test_data/listing")?;
             let listing: Vec<model::ContentSpec> = serde_json::from_reader(inbox_file)?;
-            let spec = listing.get(item_id).ok_or(Error::AppError("Does not exist".to_string()))?;
+            let spec = listing
+                .get(item_id)
+                .ok_or(Error::AppError("Does not exist".to_string()))?;
             let details_file = File::open("./test_data/item")?;
             let details: model::ContentDetails = serde_json::from_reader(details_file)?;
-            tui::content::show(&mut terminal, &spec, &details)?;
+            tui::content::show(&mut terminal, spec, &details)?;
             Ok(())
         }
 
-        _ => Err(Error::AppError("There is no preview for that command".to_string())),
+        _ => Err(Error::AppError(
+            "There is no preview for that command".to_string(),
+        )),
     }?;
 
     loop {
         match read()? {
             Event::Key(key) if key.code == KeyCode::Char('q') => return Ok(()),
-            _ => ()
+            _ => (),
         }
     }
 }

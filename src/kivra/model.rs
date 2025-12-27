@@ -1,7 +1,7 @@
+use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use chrono::{DateTime, NaiveDate, Utc};
 
 pub type UserId = String;
 
@@ -124,8 +124,7 @@ pub struct ContentSpec {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ContentDetails {
-    pub parts: Vec<Attachment>
-
+    pub parts: Vec<Attachment>,
 }
 
 pub type AttachmentKey = String;

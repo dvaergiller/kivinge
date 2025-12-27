@@ -1,14 +1,15 @@
-use chrono::{TimeZone, Local};
+use chrono::{Local, TimeZone};
 use crossterm::event::{read, Event, KeyCode};
 use ratatui::{
     layout::Constraint,
     style::{Modifier, Style},
     widgets::{Row, Table, TableState},
-    Frame};
+    Frame,
+};
 
 use crate::{error::Error, kivra::model::ContentSpec, terminal::LoadedTerminal};
 
-pub fn show(terminal: &mut LoadedTerminal, inbox: &Vec<ContentSpec>) -> Result<(), Error> {
+pub fn show(terminal: &mut LoadedTerminal, inbox: &[ContentSpec]) -> Result<(), Error> {
     let mut widget_state = TableState::new().with_selected(0);
 
     loop {
@@ -16,14 +17,14 @@ pub fn show(terminal: &mut LoadedTerminal, inbox: &Vec<ContentSpec>) -> Result<(
         match read()? {
             Event::Key(key) if key.code == KeyCode::Char('q') => {
                 return Ok(());
-            },
+            }
             Event::Key(key) if key.code == KeyCode::Up => {
                 let select = match widget_state.selected().unwrap_or(0) {
                     0 => 0,
                     n => n - 1,
                 };
                 widget_state.select(Some(select));
-            },
+            }
             Event::Key(key) if key.code == KeyCode::Down => {
                 let select = match widget_state.selected().unwrap_or(0) {
                     n if n >= inbox.len() => n,
@@ -38,24 +39,23 @@ pub fn show(terminal: &mut LoadedTerminal, inbox: &Vec<ContentSpec>) -> Result<(
 
 pub fn render(
     terminal: &mut LoadedTerminal,
-    inbox: &Vec<ContentSpec>,
-    mut widget_state: &mut TableState) ->
-    Result<(), Error>
-{
+    inbox: &[ContentSpec],
+    widget_state: &mut TableState,
+) -> Result<(), Error> {
     let widget = inbox_widget(inbox);
     let draw = |frame: &mut Frame| {
-        frame.render_stateful_widget(widget, frame.size(), &mut widget_state);
+        frame.render_stateful_widget(widget, frame.size(), widget_state);
     };
     terminal.draw(draw)?;
     Ok(())
 }
 
-fn inbox_widget(inbox: &Vec<ContentSpec>) -> Table {
+fn inbox_widget(inbox: &[ContentSpec]) -> Table {
     let rows = inbox.iter().map(inbox_row);
     let widths = [
         Constraint::Max(20),
         Constraint::Fill(1),
-        Constraint::Length(16)
+        Constraint::Length(16),
     ];
     Table::new(rows, widths)
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
