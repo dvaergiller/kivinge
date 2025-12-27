@@ -14,7 +14,7 @@ struct CliArgs {
 #[derive(Subcommand, Debug)]
 enum Command {
     Login,
-    Inbox,
+    List,
     Logout,
 }
 
@@ -31,7 +31,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
     match cli_args.command {
         Command::Login => load_session_or_login(&client).and(Ok(())),
 
-        Command::Inbox => {
+        Command::List => {
             let session = load_session_or_login(&client)?;
             let inbox = request::get_inbox_listing(&client, &session)?;
             for entry in inbox {
