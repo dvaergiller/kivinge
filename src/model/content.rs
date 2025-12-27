@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::Deserialize;
-use std::{collections::BTreeMap, ops::Deref};
+use std::{collections::BTreeMap, fmt::Display, ops::Deref};
 
 use super::Date;
 use crate::error::Error;
@@ -43,16 +43,12 @@ pub struct InboxItem {
     // pub form: //null
 }
 
-impl InboxItem {
-    pub fn name(&self) -> String {
-        format!(
-            "{}-{}-{}",
-            self.created_at.to_rfc3339(),
-            self.sender_name,
-            self.subject
-        )
-        .replace(' ', "_")
-        .replace('/', "-")
+impl Display for InboxItem {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        format!("{}_{}", self.created_at.date_naive(), self.sender_name)
+            .replace(' ', "-")
+            .replace('/', "-")
+            .fmt(formatter)
     }
 }
 
@@ -67,6 +63,12 @@ pub enum Status {
 pub struct InboxEntry {
     pub id: u32,
     pub item: InboxItem,
+}
+
+impl Display for InboxEntry {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        format!("{:#04}_{}", self.id, self.item).fmt(formatter)
+    }
 }
 
 #[derive(Clone, Default)]
@@ -123,12 +125,12 @@ impl ItemDetails {
         Ok(format!(
             "{}-{}-{}-{}.{}",
             self.created_at.to_rfc3339(),
+            index,
             self.sender_name,
             self.subject,
-            index,
-            file_extension
-        )
-        .replace(' ', "_"))
+            file_extension)
+           .replace(' ', "-")
+           .replace('/', "-"))
     }
 }
 
