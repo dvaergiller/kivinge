@@ -147,7 +147,8 @@ fn run(cli_args: CliArgs) -> Result<Option<String>, Error> {
         }
 
         Command::Login => {
-            client.get_session_or_login()?;
+            client.revoke_auth_token()?;
+            client.login()?;
             Ok(Some("Login Successful".to_string()))
         }
 
