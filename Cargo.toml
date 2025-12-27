@@ -7,6 +7,8 @@ edition = "2021"
 opt-level = 'z'
 lto = true
 strip = true
+codegen-units = 1
+panic = "abort"
 
 [lib]
 name = "kivinge"
@@ -14,7 +16,7 @@ name = "kivinge"
 [dependencies]
 base64 = { version = "0.22.1", default-features = false }
 bytes = { version = "1.7.1", default-features = false }
-cached = "0.56.0"
+cached = { version = "0.56.0", default-features = false }
 chrono = { version = "0.4.38", features = ["clock", "serde"], default-features = false }
 clap = { version = "4.5.15", features = ["derive"] }
 clap_complete = "4.5.16"
@@ -27,7 +29,7 @@ pkce = "0.2.0"
 qrcode = { version = "0.14.0", default-features = false }
 rand = { version = "0.8.5", default-features = false }
 ratatui = { version = "0.26.2", default-features = false, features = ["crossterm"] }
-reqwest = { version = "0.12.4", features = ["blocking", "gzip", "http2", "json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12.4", features = ["blocking", "gzip", "http2", "json", "native-tls"], default-features = false }
 rust_decimal = { version = "1.35.0", default-features = false, features = ["serde"] }
 serde = { version = "1.0.202", default-features = false, features = ["serde_derive"] }
 serde_json = "1.0.117"
