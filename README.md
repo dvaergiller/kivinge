@@ -24,9 +24,6 @@ kivinge completions bash > ~/.local/share/bash-completion/completions/kivinge
 
 # Zsh
 kivinge completions zsh > ~/.zfunc/_kivinge
-
-# PowerShell
-kivinge completions powershell > kivinge.ps1
 ```
 
 ## Authentication
