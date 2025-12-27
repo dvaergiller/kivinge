@@ -1,5 +1,18 @@
-use ratatui::{layout::Rect, prelude, widgets};
+use ratatui::{
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    prelude,
+    style::{self, Color, Modifier},
+    widgets::{self, Paragraph}
+};
 use std::time::Duration;
+use tracing::info;
+
+const QR_BRANDING: &str = concat!(
+" ▄▄  ▄▄ \n",
+" ██▄█▀  \n",
+" ██▀█▄  \n",
+" ▀▀  ▀▀ \n",
+);
 
 use super::{keymap::KeyEvent, qr, Command, Error, Event, TuiView};
 use crate::{
@@ -93,15 +106,56 @@ impl<'a, C: Client> TuiView for LoginView<'a, C> {
 
     fn render(&mut self, frame: &mut prelude::Frame, rect: Rect) {
         let qr = qr::encode(&self.qr_code).unwrap();
+        let qr_height = qr.lines().count() as u16;
+        let margin_top = (rect.height - qr_height) / 2;
 
-        let title = "Authenticate with BankID";
-        let block = widgets::Block::default()
-            .title(title)
-            .title_alignment(prelude::Alignment::Center)
-            .title_bottom("Press 'q' to abort login")
-            .borders(widgets::Borders::NONE);
-        let paragraph = widgets::Paragraph::new(qr).block(block).centered();
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(margin_top - 2),
+                Constraint::Length(2),
+                Constraint::Length(qr_height),
+                Constraint::Length(1),
+                Constraint::Fill(1),
+            ])
+            .split(rect);
 
-        frame.render_widget(paragraph, rect);
+        frame.render_widget(
+            Paragraph::new("Authenticate with BankID")
+                .alignment(Alignment::Center),
+            layout[1],
+        );
+        frame.render_widget(
+            Paragraph::new(qr)
+                .alignment(Alignment::Center),
+            layout[2]
+        );
+
+        let branding_height = QR_BRANDING.lines().count() as u16;
+        let branding_width = QR_BRANDING
+            .lines()
+            .next()
+            .unwrap_or_default()
+            .chars()
+            .count() as u16;
+        let branding_rect = Rect {
+            x: layout[2].x + layout[2].width / 2 - branding_width / 2,
+            y: layout[2].y + layout[2].height / 2 - branding_height / 2,
+            width: branding_width,
+            height: branding_height,
+        };
+
+        frame.render_widget(
+            Paragraph::new(QR_BRANDING)
+                .alignment(Alignment::Center)
+                .style(Color::Green),
+            branding_rect
+        );
+
+        frame.render_widget(
+            Paragraph::new("Press 'q' to abort login")
+                .alignment(Alignment::Center),
+            layout[3],
+        );
     }
 }

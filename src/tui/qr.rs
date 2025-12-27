@@ -1,9 +1,14 @@
-use qrcode::render::unicode::Dense1x2;
-use qrcode::QrCode;
+use qrcode::{EcLevel, QrCode, Version};
+use qrcode_braille::render::BraillePixel;
+use tracing::info;
 
 use super::Error;
 
 pub fn encode(code_data: &String) -> Result<String, Error> {
-    let result = QrCode::new(code_data)?.render::<Dense1x2>().build();
-    Ok(result)
+    let code = QrCode::with_version(
+        code_data,
+        Version::Normal(11),
+        EcLevel::H,
+    )?;
+    Ok(code.render::<BraillePixel>().build())
 }
