@@ -20,7 +20,7 @@ use tracing::{debug, error, warn};
 
 use crate::{
     client::Client,
-    model::content::{Attachment, InboxItem, ItemDetails},
+    model::content::{Attachment, InboxEntry, InboxItem, ItemDetails},
 };
 
 #[derive(Debug, Clone, Error, PartialEq)]
@@ -165,31 +165,48 @@ impl Display for Inode {
     }
 }
 
+struct InboxIndex {
+    pub by_name: HashMap<String, InboxEntry>,
+    pub by_id: HashMap<u32, InboxEntry>,
+}
+
 struct KivraFS<'a, C: Client> {
     client: &'a mut C,
-    inbox_cache: TimedSizedCache<(), HashMap<u32, InboxItem>>,
+    inbox_cache: TimedSizedCache<(), InboxIndex>,
     details_cache: TimedCache<u32, ItemDetails>,
     attachment_cache: SizedCache<(u32, u32), Bytes>,
 }
 
 impl<'a, C: Client> KivraFS<'a, C> {
-    fn inbox_listing(&mut self) -> Result<&HashMap<u32, InboxItem>, Error> {
+    fn inbox_index(&mut self) -> Result<&InboxIndex, Error> {
         let listing = self.inbox_cache.cache_try_get_or_set_with((), || {
             let inbox = self
                 .client
                 .get_inbox_listing()
                 .map_err(|err| Error::InternalError(err.to_string()))?;
-            Ok(inbox.into_iter().map(|entry| (entry.id, entry.item)).collect())
+            let by_name = inbox
+                .iter()
+                .map(|entry| {
+                    (entry.item.name(), entry.clone())
+                })
+                .collect();
+            let by_id = inbox
+                .iter()
+                .map(|entry| {
+                    (entry.id, entry.clone())
+                })
+                .collect();
+            Ok(InboxIndex { by_name, by_id })
         })?;
         Ok(listing)
     }
 
-    fn inbox_item(&mut self, entry_id: u32) -> Result<&InboxItem, Error> {
-        self.inbox_listing()?.get(&entry_id).ok_or(Error::NotFound)
+    fn inbox_item(&mut self, entry_id: u32) -> Result<&InboxEntry, Error> {
+        self.inbox_index()?.by_id.get(&entry_id).ok_or(Error::NotFound)
     }
 
     fn details(&mut self, entry_id: u32) -> Result<&ItemDetails, Error> {
-        let item_key = self.inbox_item(entry_id)?.key.clone();
+        let item_key = self.inbox_item(entry_id)?.item.key.clone();
         let details =
             self.details_cache.cache_try_get_or_set_with(entry_id, || {
                 self.client
@@ -213,7 +230,7 @@ impl<'a, C: Client> KivraFS<'a, C> {
         entry_id: u32,
         attachment_id: u32,
     ) -> Result<&Bytes, Error> {
-        let item_key = self.inbox_item(entry_id)?.key.clone();
+        let item_key = self.inbox_item(entry_id)?.item.key.clone();
         let attachment = self.attachment(entry_id, attachment_id)?;
         let attachment_key = attachment.key.clone();
         let attachment_body = attachment.body.clone();
@@ -251,13 +268,15 @@ impl<'a, C: Client> KivraFS<'a, C> {
         parent_id: u64,
     ) -> Result<Vec<(String, Inode)>, Error> {
         match self.inode(parent_id)? {
-            Inode::Root => Ok(self
-                .inbox_listing()?
-                .iter()
-                .map(|(&entry_id, item)| {
-                    (item.name(), Inode::InboxEntry { entry_id })
-                })
-                .collect()),
+            Inode::Root => Ok(
+                self
+                    .inbox_index()?
+                    .by_id
+                    .iter()
+                    .map(|(&entry_id, entry)| {
+                        (entry.item.name(), Inode::InboxEntry { entry_id })
+                    })
+                    .collect()),
             Inode::InboxEntry { entry_id } => {
                 let details = self.details(entry_id)?;
                 Ok(details
@@ -284,12 +303,24 @@ impl<'a, C: Client> KivraFS<'a, C> {
         parent_id: u64,
         name: &str,
     ) -> Result<Inode, Error> {
-        self.inode_children(parent_id)?
-            .into_iter()
-            .find_map(|(child_name, inode)| {
-                (child_name == name).then_some(inode)
-            })
-            .ok_or(Error::NotFound)
+        match self.inode(parent_id)? {
+            Inode::Root => {
+                self
+                    .inbox_index()?
+                    .by_name
+                    .get(name)
+                    .map(|entry| Inode::InboxEntry { entry_id: entry.id })
+                    .ok_or(Error::NotFound)
+            }
+            Inode::InboxEntry { .. } => {
+                let children = self.inode_children(parent_id)?;
+                children.iter()
+                    .find(|(child_name, _)| child_name == name)
+                    .map(|entry| entry.1.clone())
+                    .ok_or(Error::NotFound)
+            }
+            Inode::Attachment { .. } => Err(Error::IsNotDir),
+        }
     }
 }
 
@@ -379,8 +410,6 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         );
         for (idx, (name, inode)) in after_offset.iter().enumerate() {
             let add_offset = idx as i64 + offset + 1;
-            debug!("adding entry on offset {add_offset}");
-
             if reply.add(
                 inode.to_u64(),
                 add_offset,
