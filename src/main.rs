@@ -1,5 +1,6 @@
 use std::{fs::File, io::Write, path::Path};
 
+use bytes::Bytes;
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{
     self,
@@ -43,12 +44,13 @@ enum Command {
     #[command(about = "Download attachment")]
     Download {
         item_id: u32,
-
         attachment_num: u32,
-
         #[arg(default_value = ".")]
         download_dir: String,
     },
+
+    #[command(about = "Open attachment")]
+    Open { item_id: u32, attachment_num: u32 },
 
     #[command(about = "Log out from Kivra")]
     Logout,
@@ -127,16 +129,27 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             let inbox = client.get_inbox_listing(&session)?;
             let entry = get_entry_by_id(inbox, item_id)?;
             let details = client.get_item_details(&session, &entry.item.key)?;
-            let attachment = details
-                .parts
-                .get(attachment_num as usize)
-                .ok_or(Error::UserError(format!(
-                    "Inbox item {item_id} has no attachment number {attachment_num}"
-                )))?;
-            let file = client.download_attachment(&session, &entry.item.key, &attachment.key)?;
+            let file = get_attachment_body(&client, &session, item_id, attachment_num)?;
             let filename = details.attachment_name(attachment_num as usize)?;
             let full_path = Path::new(&download_dir).join(filename);
             File::create_new(full_path)?.write_all(&file)?;
+            Ok(())
+        }
+
+        Command::Open {
+            item_id,
+            attachment_num,
+        } => {
+            let session = load_session_or_login(&client)?;
+            let inbox = client.get_inbox_listing(&session)?;
+            let entry = get_entry_by_id(inbox, item_id)?;
+            let details = client.get_item_details(&session, &entry.item.key)?;
+            let file = get_attachment_body(&client, &session, item_id, attachment_num)?;
+            let filename = details.attachment_name(attachment_num as usize)?;
+            let tmp_dir = std::env::temp_dir();
+            let full_path = Path::new(&tmp_dir).join(filename);
+            File::create_new(&full_path)?.write_all(&file)?;
+            opener::open(full_path)?;
             Ok(())
         }
 
@@ -173,4 +186,28 @@ fn get_entry_by_id(inbox: InboxListing, item_id: u32) -> Result<InboxEntry, Erro
         .ok_or(Error::UserError(format!(
             "Inbox item {item_id} does not exist"
         )))
+}
+
+fn get_attachment_body(
+    client: &impl Client,
+    session: &Session,
+    item_id: u32,
+    attachment_num: u32,
+) -> Result<Bytes, Error> {
+    let inbox = client.get_inbox_listing(&session)?;
+    let entry = get_entry_by_id(inbox, item_id)?;
+    let details = client.get_item_details(&session, &entry.item.key)?;
+    let attachment = details
+        .parts
+        .get(attachment_num as usize)
+        .ok_or(Error::UserError(format!(
+            "Inbox item {item_id} has no attachment number {attachment_num}"
+        )))?;
+    match (&attachment.key, &attachment.body) {
+        (None, None) => Err(Error::AppError(
+            "Attachment has no attachment key nor inline body".to_string(),
+        )),
+        (Some(key), _) => client.download_attachment(&session, &entry.item.key, &key),
+        (_, Some(body)) => Ok(Bytes::copy_from_slice(body)),
+    }
 }

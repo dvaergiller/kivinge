@@ -20,6 +20,9 @@ pub enum Error {
     #[error("IO error encountered - {0}")]
     IOError(#[from] std::io::Error),
 
+    #[error("Failed to open attachment - {0}")]
+    OpenError(#[from] opener::OpenError),
+
     #[error("Application error - {0}")]
     AppError(String),
 

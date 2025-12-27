@@ -95,10 +95,8 @@ pub fn render(
             .borders(Borders::ALL)
             .title("Attachments:")
             .title_style(Style::new().bold());
-        let attachments: Vec<String> = content_details
-            .parts
-            .iter()
-            .map(|d| indent(2, &d.name))
+        let attachments: Vec<String> = (0..(content_details.parts.len()))
+            .map(|i| content_details.attachment_name(i).unwrap())
             .collect();
         let subject_widget = List::new(attachments)
             .block(attachments_block)
