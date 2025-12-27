@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::fs::File;
+use std::path::PathBuf;
 
 use super::error::Error;
 use super::model::UserId;
@@ -51,10 +51,9 @@ impl From<Session> for StoredSession {
 }
 
 fn default_session_path() -> Result<PathBuf, Error> {
-    let mut path = dirs::data_local_dir()
-        .ok_or(Error::AppError(
-            "Failed to determine data local dir for saving session data"
-                .to_string()))?;
+    let mut path = dirs::data_local_dir().ok_or(Error::AppError(
+        "Failed to determine data local dir for saving session data".to_string(),
+    ))?;
     path.push("kivinge.session");
     Ok(path)
 }
@@ -85,15 +84,18 @@ pub fn delete_saved() -> Result<(), Error> {
 
 pub fn make(access_token: String, id_token: String) -> Result<Session, Error> {
     let user_info = extract_user_info(&id_token)?;
-    Ok(Session { user_info, access_token, id_token })
+    Ok(Session {
+        user_info,
+        access_token,
+        id_token,
+    })
 }
 
-fn extract_user_info(id_token: &str) -> Result<UserInfo, Error>
-{
+fn extract_user_info(id_token: &str) -> Result<UserInfo, Error> {
     let sections = id_token.split('.').collect::<Vec<&str>>();
     let claims_base64 = sections.get(1).ok_or(Error::AppError(
-        "Malformed JWT returned by server: Too few sections".to_string())
-    )?;
+        "Malformed JWT returned by server: Too few sections".to_string(),
+    ))?;
     let claims_json = URL_SAFE_NO_PAD.decode(claims_base64)?;
     Ok(serde_json::from_slice(claims_json.as_slice())?)
 }

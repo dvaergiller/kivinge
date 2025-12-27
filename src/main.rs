@@ -1,14 +1,14 @@
 use clap::{Parser, Subcommand};
 use std::thread::sleep;
 
-use kivinge::kivra::{request, qr, session, model::*, error::Error};
+use kivinge::kivra::{error::Error, model::*, qr, request, session};
 use kivinge::{terminal, terminal::prelude, terminal::widgets};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct CliArgs {
     #[command(subcommand)]
-    command: Command
+    command: Command,
 }
 
 #[derive(Subcommand, Debug)]
@@ -22,7 +22,7 @@ fn main() {
     let cli_args = CliArgs::parse();
     match run(cli_args) {
         Ok(()) => (),
-        Err(err) => println!("Error: {err}")
+        Err(err) => println!("Error: {err}"),
     }
 }
 
@@ -38,35 +38,30 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
                 println!("{} - {}", entry.sender_name, entry.subject);
             }
             Ok(())
-        },
+        }
 
         Command::Logout => {
-            let session = session::try_load()?
-                .ok_or(Error::AppError("No session found".to_string()))?;
+            let session =
+                session::try_load()?.ok_or(Error::AppError("No session found".to_string()))?;
             request::revoke_auth_token(&client, session)?;
             session::delete_saved()
-        },
+        }
     }
 }
 
-fn load_session_or_login(client: &request::Client) ->
-    Result<session::Session, Error>
-{
+fn load_session_or_login(client: &request::Client) -> Result<session::Session, Error> {
     let loaded = session::try_load()?;
     if let Some(session) = loaded {
         return Ok(session);
     }
 
     let auth_response = login(client)?;
-    let session = session::make(auth_response.access_token,
-                                auth_response.id_token)?;
+    let session = session::make(auth_response.access_token, auth_response.id_token)?;
     session::save(&session)?;
     Ok(session)
 }
 
-fn login(client: &request::Client) ->
-    Result<AuthTokenResponse, Error>
-{
+fn login(client: &request::Client) -> Result<AuthTokenResponse, Error> {
     let config = request::get_config(client)?;
     let mut terminal = terminal::load()?;
     let (verifier, auth_resp) = request::start_auth(client, &config)?;
@@ -86,14 +81,9 @@ fn login(client: &request::Client) ->
                 terminal.draw(|f| ui_show_login_qr_code(f, &qrcode))?;
             }
             (_, _, Some(_)) => {
-                return request::get_auth_token(client,
-                                               &config,
-                                               &auth_resp,
-                                               verifier);
+                return request::get_auth_token(client, &config, &auth_resp, verifier);
             }
-            (_, _, _) => {
-                return Err(Error::AppError("I dont know".to_string()));
-            }
+            (_, _, _) => return Err(Error::AppError("I dont know".to_string())),
         }
     }
 }

@@ -1,7 +1,7 @@
-use serde::{Serialize, Deserialize};
-use time::{macros::format_description, OffsetDateTime};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use time::{macros::format_description, OffsetDateTime};
 
 pub type UserId = String;
 
@@ -68,7 +68,7 @@ pub struct AuthTokenResponse {
 #[derive(Serialize, Debug)]
 pub struct RevokeRequest {
     pub token: String,
-    pub token_type_hint: String
+    pub token_type_hint: String,
 }
 
 pub type ContentKey = String;
@@ -77,26 +77,20 @@ pub type AgreementKey = String;
 pub type ContentLabels = BTreeMap<String, bool>;
 
 #[derive(Deserialize, Debug)]
-pub struct DateTime(
-    #[serde(with = "time::serde::rfc3339")]
-    pub OffsetDateTime);
+pub struct DateTime(#[serde(with = "time::serde::rfc3339")] pub OffsetDateTime);
 
 #[derive(Debug)]
 pub struct Date(pub time::Date);
 
 impl<'a> Deserialize<'a> for Date {
-    fn deserialize<Des: serde::Deserializer<'a>>(d: Des) ->
-        Result<Date, Des::Error>
-    {
+    fn deserialize<Des: serde::Deserializer<'a>>(d: Des) -> Result<Date, Des::Error> {
         let mut date_string = String::deserialize(d)?.clone();
         let _ = date_string.split_off(10);
         let format = format_description!("[year]-[month]-[day]");
-        let date = time::Date::parse(&date_string, &format)
-            .map_err(serde::de::Error::custom)?;
+        let date = time::Date::parse(&date_string, &format).map_err(serde::de::Error::custom)?;
         Ok(Date(date))
     }
 }
-
 
 #[derive(Deserialize, Debug)]
 pub struct ContentSpec {
@@ -125,7 +119,6 @@ pub struct ContentSpec {
     pub content_type: String,
     pub has_multiple_options: bool,
     pub sender_icon_url: String,
-
     // Do not know how to decode these yet
     // pub tags: // null
     // pub form: //null
