@@ -20,7 +20,7 @@ use tracing::{debug, error, warn};
 
 use crate::{
     client::Client,
-    model::content::{Attachment, InboxEntry, InboxItem, ItemDetails},
+    model::content::{Attachment, InboxEntry, ItemDetails},
 };
 
 #[derive(Debug, Clone, Error, PartialEq)]
@@ -91,6 +91,8 @@ pub fn mount(
         MountOption::DefaultPermissions,
         MountOption::RO,
         MountOption::NoAtime,
+        MountOption::AllowRoot,
+        MountOption::AutoUnmount,
     ];
     mount2(filesystem, mountpoint, &mount_options)?;
     Ok(())
