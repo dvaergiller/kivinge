@@ -69,9 +69,7 @@ impl Client for KivraClient {
         auth_code: String,
         verifier: CodeVerifier,
     ) -> Result<AuthTokenResponse, Error> {
-        let verifier_string =
-            String::from_utf8(verifier).map_err(|e| Error::AppError(e.to_string()))?;
-
+        let verifier_string = String::from_utf8(verifier)?;
         let token_request = AuthTokenRequest {
             client_id: config.oauth_default_client_id.clone(),
             code: auth_code,

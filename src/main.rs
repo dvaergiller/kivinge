@@ -139,8 +139,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
         }
 
         Command::Logout => {
-            let session =
-                session::try_load()?.ok_or(Error::UserError("No session found".to_string()))?;
+            let session = session::try_load()?.ok_or(Error::UserError("No session found"))?;
             client.revoke_auth_token(&session)?;
             session::delete_saved()
         }
@@ -168,7 +167,7 @@ fn load_session_or_login(client: &impl Client) -> Result<session::Session, Error
             session::save(&session)?;
             Ok(session)
         }
-        None => Err(Error::AppError("Login aborted".to_string())),
+        None => Err(Error::AppError("Login aborted")),
     }
 }
 
@@ -176,9 +175,7 @@ fn get_entry_by_id(inbox: InboxListing, item_id: u32) -> Result<InboxEntry, Erro
     inbox
         .into_iter()
         .find(|i| i.id == item_id)
-        .ok_or(Error::UserError(format!(
-            "Inbox item {item_id} does not exist"
-        )))
+        .ok_or(Error::UserError("Inbox item does not exist"))
 }
 
 fn get_attachment_body(
@@ -193,12 +190,11 @@ fn get_attachment_body(
     let attachment = details
         .parts
         .get(attachment_num as usize)
-        .ok_or(Error::UserError(format!(
-            "Inbox item {item_id} has no attachment number {attachment_num}"
-        )))?;
+        .ok_or(Error::UserError("Inbox item has no such attachment number"))?;
+
     match (&attachment.key, &attachment.body) {
         (None, None) => Err(Error::AppError(
-            "Attachment has no attachment key nor inline body".to_string(),
+            "Attachment has no attachment key nor inline body",
         )),
         (Some(key), _) => client.download_attachment(session, &entry.item.key, key),
         (_, Some(body)) => Ok(Bytes::copy_from_slice(body.as_bytes())),

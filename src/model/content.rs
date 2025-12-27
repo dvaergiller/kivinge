@@ -89,9 +89,10 @@ pub struct ItemDetails {
 
 impl ItemDetails {
     pub fn attachment_name(&self, index: usize) -> Result<String, Error> {
-        let attachment = self.parts.get(index).ok_or(Error::AppError(
-            "Attachment index out of bounds".to_string(),
-        ))?;
+        let attachment = self
+            .parts
+            .get(index)
+            .ok_or(Error::AppError("Attachment index out of bounds"))?;
         let file_extension = match attachment.content_type.as_str() {
             "application/pdf" => "pdf",
             "text/html" => "html",

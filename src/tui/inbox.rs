@@ -52,7 +52,7 @@ pub fn show(
                 Some(selected) => {
                     let entry = inbox
                         .get(selected)
-                        .ok_or(Error::AppError("Selected item out of bounds".to_string()))?;
+                        .ok_or(Error::AppError("Selected item out of bounds"))?;
                     let details = client.get_item_details(session, &entry.item.key)?;
                     content::show(terminal, &entry.item, &details)?;
                 }

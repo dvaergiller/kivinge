@@ -1,3 +1,4 @@
+use std::string;
 use thiserror;
 
 #[derive(thiserror::Error, Debug)]
@@ -10,6 +11,9 @@ pub enum Error {
 
     #[error("base64 decode failed - {0}")]
     Base64Error(#[from] base64::DecodeError),
+
+    #[error("UTF-8 decode error")]
+    FromUtf8Error(#[from] string::FromUtf8Error),
 
     #[error("Random data generation failed - {0}")]
     RandError(#[from] rand::Error),
@@ -24,8 +28,8 @@ pub enum Error {
     OpenError(#[from] opener::OpenError),
 
     #[error("Application error - {0}")]
-    AppError(String),
+    AppError(&'static str),
 
     #[error("User error - {0}")]
-    UserError(String),
+    UserError(&'static str),
 }
