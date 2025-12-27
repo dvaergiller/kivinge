@@ -1,4 +1,8 @@
-use std::{fs::File, io::Write, path::Path};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use bytes::Bytes;
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
@@ -46,7 +50,7 @@ enum Command {
         item_id: u32,
         attachment_num: u32,
         #[arg(default_value = ".")]
-        download_dir: String,
+        download_dir: PathBuf,
     },
 
     #[command(about = "Open attachment")]
@@ -84,24 +88,15 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
     };
 
     match cli_args.command {
-        Command::Completions {
-            shell: CompletionsShell::Bash,
-        } => {
-            generate_completions(Bash);
+        Command::Completions { shell } => {
+            match shell {
+                CompletionsShell::Bash => generate_completions(Bash),
+                CompletionsShell::PowerShell => generate_completions(PowerShell),
+                CompletionsShell::Zsh => generate_completions(Zsh),
+            }
             Ok(())
         }
-        Command::Completions {
-            shell: CompletionsShell::PowerShell,
-        } => {
-            generate_completions(PowerShell);
-            Ok(())
-        }
-        Command::Completions {
-            shell: CompletionsShell::Zsh,
-        } => {
-            generate_completions(Zsh);
-            Ok(())
-        }
+
         Command::Login => load_session_or_login(&client).and(Ok(())),
 
         Command::List => {
@@ -125,37 +120,23 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             attachment_num,
             download_dir,
         } => {
-            let session = load_session_or_login(&client)?;
-            let inbox = client.get_inbox_listing(&session)?;
-            let entry = get_entry_by_id(inbox, item_id)?;
-            let details = client.get_item_details(&session, &entry.item.key)?;
-            let file = get_attachment_body(&client, &session, item_id, attachment_num)?;
-            let filename = details.attachment_name(attachment_num as usize)?;
-            let full_path = Path::new(&download_dir).join(filename);
-            File::create_new(full_path)?.write_all(&file)?;
-            Ok(())
+            let full_path = download_attachment(&client, item_id, attachment_num, download_dir)?;
+            Ok(println!("{}", full_path.to_string_lossy()))
         }
 
         Command::Open {
             item_id,
             attachment_num,
         } => {
-            let session = load_session_or_login(&client)?;
-            let inbox = client.get_inbox_listing(&session)?;
-            let entry = get_entry_by_id(inbox, item_id)?;
-            let details = client.get_item_details(&session, &entry.item.key)?;
-            let file = get_attachment_body(&client, &session, item_id, attachment_num)?;
-            let filename = details.attachment_name(attachment_num as usize)?;
             let tmp_dir = std::env::temp_dir();
-            let full_path = Path::new(&tmp_dir).join(filename);
-            File::create_new(&full_path)?.write_all(&file)?;
+            let full_path = download_attachment(&client, item_id, attachment_num, tmp_dir)?;
             opener::open(full_path)?;
             Ok(())
         }
 
         Command::Logout => {
             let session =
-                session::try_load()?.ok_or(Error::AppError("No session found".to_string()))?;
+                session::try_load()?.ok_or(Error::UserError("No session found".to_string()))?;
             client.revoke_auth_token(&session)?;
             session::delete_saved()
         }
@@ -210,4 +191,21 @@ fn get_attachment_body(
         (Some(key), _) => client.download_attachment(session, &entry.item.key, key),
         (_, Some(body)) => Ok(Bytes::copy_from_slice(body)),
     }
+}
+
+fn download_attachment(
+    client: &impl Client,
+    item_id: u32,
+    attachment_num: u32,
+    download_dir: PathBuf,
+) -> Result<PathBuf, Error> {
+    let session = load_session_or_login(client)?;
+    let inbox = client.get_inbox_listing(&session)?;
+    let entry = get_entry_by_id(inbox, item_id)?;
+    let details = client.get_item_details(&session, &entry.item.key)?;
+    let file = get_attachment_body(client, &session, item_id, attachment_num)?;
+    let filename = details.attachment_name(attachment_num as usize)?;
+    let full_path = Path::new(&download_dir).join(filename);
+    File::create_new(&full_path)?.write_all(&file)?;
+    Ok(full_path)
 }
