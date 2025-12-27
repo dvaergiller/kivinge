@@ -89,13 +89,16 @@ fn render_main(frame: &mut Frame, session: Option<&Session>) -> Rect {
         .split(layout[0]);
 
     let title =
-        Paragraph::new("Kivinge").bold().bg(ratatui::style::Color::Green);
+        Paragraph::new("Kivinge")
+        .bold()
+        .fg(ratatui::style::Color::Black)
+        .bg(ratatui::style::Color::Green);
     frame.render_widget(title, header[0]);
 
     let user_name =
         session.map(|s| s.user_info.name.clone()).unwrap_or_default();
-    let session_header =
-        Paragraph::new(user_name)
+    let session_header = Paragraph::new(user_name)
+        .fg(ratatui::style::Color::Black)
         .bg(ratatui::style::Color::Green)
         .right_aligned();
     frame.render_widget(session_header, header[1]);
