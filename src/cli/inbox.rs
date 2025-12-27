@@ -4,7 +4,7 @@ use tabled::settings::Style;
 
 use crate::kivra::model::InboxListing;
 
-pub fn print(inbox: InboxListing) {
+pub fn format(inbox: InboxListing) -> String {
     let mut builder = Builder::default();
     builder.push_record(["Id", "Sender", "Subject", "Created At"]);
     for entry in inbox {
@@ -19,6 +19,5 @@ pub fn print(inbox: InboxListing) {
             &local_datetime,
         ]);
     }
-    let table = builder.build().with(Style::rounded()).to_string();
-    println!("{table}");
+    builder.build().with(Style::rounded()).to_string()
 }

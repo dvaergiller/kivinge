@@ -1,3 +1,5 @@
+use bytes::Bytes;
+
 use super::model::*;
 use super::session::Session;
 use crate::error::Error;
@@ -28,14 +30,14 @@ pub trait Client {
 
     fn get_inbox_listing(&self, session: &Session) -> Result<InboxListing, Error>;
 
-    fn get_item_details(&self, session: &Session, item_key: &String) -> Result<ItemDetails, Error>;
+    fn get_item_details(&self, session: &Session, item_key: &str) -> Result<ItemDetails, Error>;
 
     fn download_attachment(
         &self,
         session: &Session,
-        item_key: &String,
-        attachment_key: &String,
-    ) -> Result<Vec<u8>, Error>;
+        item_key: &str,
+        attachment_key: &str,
+    ) -> Result<Bytes, Error>;
 }
 
 impl Client for Box<dyn Client> {
@@ -72,16 +74,16 @@ impl Client for Box<dyn Client> {
         (**self).get_inbox_listing(session)
     }
 
-    fn get_item_details(&self, session: &Session, item_key: &String) -> Result<ItemDetails, Error> {
+    fn get_item_details(&self, session: &Session, item_key: &str) -> Result<ItemDetails, Error> {
         (**self).get_item_details(session, item_key)
     }
 
     fn download_attachment(
         &self,
         session: &Session,
-        item_key: &String,
-        attachment_key: &String,
-    ) -> Result<Vec<u8>, Error> {
+        item_key: &str,
+        attachment_key: &str,
+    ) -> Result<Bytes, Error> {
         (**self).download_attachment(session, item_key, attachment_key)
     }
 }

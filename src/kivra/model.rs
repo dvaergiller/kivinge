@@ -187,7 +187,7 @@ impl ItemDetails {
             index,
             file_extension
         )
-        .replace(" ", "_"))
+        .replace(' ', "_"))
     }
 }
 

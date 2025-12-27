@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use std::cell::RefCell;
 use std::include_str;
 
@@ -61,11 +62,7 @@ impl Client for MockClient {
         Ok(InboxListing::from_content_specs(listing))
     }
 
-    fn get_item_details(
-        &self,
-        _session: &Session,
-        _item_key: &String,
-    ) -> Result<ItemDetails, Error> {
+    fn get_item_details(&self, _session: &Session, _item_key: &str) -> Result<ItemDetails, Error> {
         let details = serde_json::from_str(include_str!("test_data/details.json"))?;
         Ok(details)
     }
@@ -73,11 +70,9 @@ impl Client for MockClient {
     fn download_attachment(
         &self,
         _session: &Session,
-        _item_key: &String,
-        _attachment_key: &String,
-    ) -> Result<Vec<u8>, Error> {
-        let mut bytes = Vec::new();
-        bytes.extend_from_slice("tjena".as_bytes());
-        Ok(bytes)
+        _item_key: &str,
+        _attachment_key: &str,
+    ) -> Result<Bytes, Error> {
+        Ok(Bytes::from_static(b"tjena"))
     }
 }

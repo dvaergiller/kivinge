@@ -1,3 +1,5 @@
+use bytes::Bytes;
+
 use super::Client;
 use crate::error::Error;
 use crate::kivra::model::*;
@@ -112,7 +114,7 @@ impl Client for KivraClient {
         Ok(InboxListing::from_content_specs(listing))
     }
 
-    fn get_item_details(&self, session: &Session, item_key: &String) -> Result<ItemDetails, Error> {
+    fn get_item_details(&self, session: &Session, item_key: &str) -> Result<ItemDetails, Error> {
         let user_id = &session.user_info.kivra_user_id;
         let details = self
             .client
@@ -126,10 +128,20 @@ impl Client for KivraClient {
 
     fn download_attachment(
         &self,
-        _session: &Session,
-        _item_key: &String,
-        _attachment_key: &String,
-    ) -> Result<Vec<u8>, Error> {
-        Err(Error::AppError("Not implemented".to_string()))
+        session: &Session,
+        item_key: &str,
+        attachment_key: &str,
+    ) -> Result<Bytes, Error> {
+        let user_id = &session.user_info.kivra_user_id;
+        let attachment = self
+            .client
+            .get(format!(
+                "{API_URL}/v1/user/{user_id}/content/{item_key}/file/{attachment_key}/raw"
+            ))
+            .bearer_auth(&session.access_token)
+            .send()?
+            .error_for_status()?
+            .bytes()?;
+        Ok(attachment)
     }
 }

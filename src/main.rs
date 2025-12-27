@@ -8,7 +8,8 @@ use clap_complete::{
 };
 use kivinge::kivra::{
     client::{self, Client},
-    session,
+    model::{InboxEntry, InboxListing},
+    session::{self, Session},
 };
 use kivinge::{cli, error::Error, terminal, tui};
 
@@ -104,37 +105,27 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
         Command::List => {
             let session = load_session_or_login(&client)?;
             let inbox = client.get_inbox_listing(&session)?;
-            cli::inbox::print(inbox);
+            println!("{}", cli::inbox::format(inbox));
             Ok(())
         }
 
         Command::View { item_id } => {
             let session = load_session_or_login(&client)?;
             let inbox = client.get_inbox_listing(&session)?;
-            let entry = inbox
-                .into_iter()
-                .find(|i| i.id == item_id)
-                .ok_or(Error::UserError(format!(
-                    "Inbox item {item_id} does not exist"
-                )))?;
+            let entry = get_entry_by_id(inbox, item_id)?;
             let details = client.get_item_details(&session, &entry.item.key)?;
-            cli::inbox_item::print(details)?;
+            println!("{}", cli::inbox_item::format(details)?);
             Ok(())
         }
 
         Command::Download {
             item_id,
             attachment_num,
-            download_dir
+            download_dir,
         } => {
             let session = load_session_or_login(&client)?;
             let inbox = client.get_inbox_listing(&session)?;
-            let entry = inbox
-                .into_iter()
-                .find(|i| i.id == item_id)
-                .ok_or(Error::UserError(format!(
-                    "Inbox item {item_id} does not exist"
-                )))?;
+            let entry = get_entry_by_id(inbox, item_id)?;
             let details = client.get_item_details(&session, &entry.item.key)?;
             let attachment = details
                 .parts
@@ -145,7 +136,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             let file = client.download_attachment(&session, &entry.item.key, &attachment.key)?;
             let filename = details.attachment_name(attachment_num as usize)?;
             let full_path = Path::new(&download_dir).join(filename);
-            File::create_new(full_path)?.write_all(file.as_slice())?;
+            File::create_new(full_path)?.write_all(&file)?;
             Ok(())
         }
 
@@ -158,7 +149,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
     }
 }
 
-fn load_session_or_login(client: &impl Client) -> Result<session::Session, Error> {
+fn load_session_or_login(client: &impl Client) -> Result<Session, Error> {
     let loaded = session::try_load()?;
     if let Some(session) = loaded {
         return Ok(session);
@@ -173,4 +164,13 @@ fn load_session_or_login(client: &impl Client) -> Result<session::Session, Error
         }
         None => Err(Error::AppError("Login aborted".to_string())),
     }
+}
+
+fn get_entry_by_id(inbox: InboxListing, item_id: u32) -> Result<InboxEntry, Error> {
+    inbox
+        .into_iter()
+        .find(|i| i.id == item_id)
+        .ok_or(Error::UserError(format!(
+            "Inbox item {item_id} does not exist"
+        )))
 }

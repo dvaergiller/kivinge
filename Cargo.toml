@@ -13,6 +13,7 @@ name = "kivinge"
 
 [dependencies]
 base64 = { version = "0.22.1", default-features = false }
+bytes = "1.7.1"
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.15", features = ["cargo", "derive"] }
 clap_complete = "4.5.16"
