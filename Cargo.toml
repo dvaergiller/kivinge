@@ -13,6 +13,7 @@ name = "kivinge"
 
 [dependencies]
 base64 = { version = "0.22.1", default-features = false }
+chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.15", features = ["cargo", "derive"] }
 clap_complete = "4.5.16"
 crossterm = { version = "0.27.0", default-features = false }
@@ -26,4 +27,3 @@ rust_decimal = { version = "1.35.0", features = ["serde"], default-features = fa
 serde = { version = "1.0.202", features = ["serde_derive"], default-features = false }
 serde_json = "1.0.117"
 thiserror = "1.0.61"
-time = { version = "0.3.36", features = ["macros", "parsing", "serde"], default-features = false }

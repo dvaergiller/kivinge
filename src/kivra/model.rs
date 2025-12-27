@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use time::{macros::format_description, OffsetDateTime};
+use chrono::{DateTime, NaiveDate, Utc};
 
 pub type UserId = String;
 
@@ -76,18 +76,15 @@ pub type SenderKey = String;
 pub type AgreementKey = String;
 pub type ContentLabels = BTreeMap<String, bool>;
 
-#[derive(Deserialize, Debug)]
-pub struct DateTime(#[serde(with = "time::serde::rfc3339")] pub OffsetDateTime);
-
 #[derive(Debug)]
-pub struct Date(pub time::Date);
+pub struct Date(pub chrono::NaiveDate);
 
 impl<'a> Deserialize<'a> for Date {
     fn deserialize<Des: serde::Deserializer<'a>>(d: Des) -> Result<Date, Des::Error> {
         let mut date_string = String::deserialize(d)?.clone();
-        let _ = date_string.split_off(10);
-        let format = format_description!("[year]-[month]-[day]");
-        let date = time::Date::parse(&date_string, &format).map_err(serde::de::Error::custom)?;
+        let _removed = date_string.split_off(10);
+        let date = NaiveDate::parse_from_str(&date_string, "%Y-%m-%d")
+            .map_err(serde::de::Error::custom)?;
         Ok(Date(date))
     }
 }
@@ -97,13 +94,13 @@ pub struct ContentSpec {
     pub key: ContentKey,
     pub sender: SenderKey,
     pub sender_name: String,
-    pub created_at: DateTime,
+    pub created_at: DateTime<Utc>,
     // This can be empty. Let's worry about that if we need the field:
     // pub generated_at: DateTime,
     pub subject: String,
     pub status: String, // Might be an enum later
     pub labels: ContentLabels,
-    pub indexed_at: DateTime,
+    pub indexed_at: DateTime<Utc>,
     #[serde(default)]
     pub payable: bool,
     pub amount: Option<Decimal>,

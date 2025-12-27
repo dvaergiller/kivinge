@@ -52,15 +52,7 @@ pub fn show(terminal: &mut terminal::LoadedTerminal, client: &request::Client) -
     }
 }
 
-pub fn test_render(terminal: &mut LoadedTerminal) -> Result<(), Error> {
-    let qr = "bankid.aba9c84c-c6ab-420f-830d-6aaa59ce9599.3.\
-              d421c4e52d81fe6ad708b6817aef3b23be7a306d800324b871b0303c041e62f2";
-    render(terminal, &qr.to_string())?;
-    read()?;
-    Ok(())
-}
-
-fn render(terminal: &mut LoadedTerminal, qr_code: &String) -> Result<(), Error> {
+pub fn render(terminal: &mut LoadedTerminal, qr_code: &String) -> Result<(), Error> {
     let qr = qr::encode(qr_code)?;
 
     let title = "Authenticate with BankID";

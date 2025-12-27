@@ -3,4 +3,4 @@ pub mod error;
 pub mod kivra;
 pub mod terminal;
 pub mod tui;
-pub mod table;
+

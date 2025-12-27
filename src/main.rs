@@ -1,10 +1,12 @@
+use std::{fs::File, io::Read};
+
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{
     self,
     shells::{Bash, PowerShell, Zsh},
     Generator,
 };
-use kivinge::kivra::{request, session};
+use kivinge::kivra::{request, model, session};
 use kivinge::{cli, error::Error, terminal, tui};
 
 #[derive(Parser, Debug)]
@@ -55,15 +57,8 @@ fn generate_completions<G: Generator>(gen: G) {
 fn run(cli_args: CliArgs) -> Result<(), Error> {
     let client = request::client();
     match cli_args.command {
-        Command::Login if cli_args.preview => {
-            let mut terminal = terminal::load()?;
-            tui::login::test_render(&mut terminal)
-        }
-
-        Command::List if cli_args.preview => {
-            let mut terminal = terminal::load()?;
-            tui::login::test_render(&mut terminal)
-        }
+        _ if cli_args.preview =>
+            run_preview(cli_args),
 
         Command::Completions { shell: CompletionsShell::Bash } =>
             Ok(generate_completions(Bash)),
@@ -87,6 +82,25 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             request::revoke_auth_token(&client, session)?;
             session::delete_saved()
         }
+    }
+}
+
+fn run_preview(cli_args: CliArgs) -> Result<(), Error> {
+    match cli_args.command {
+        Command::Login => {
+            let mut qr_code = String::new();
+            File::open("./test_data/qrcode")?.read_to_string(&mut qr_code)?;
+            let mut terminal = terminal::load()?;
+            tui::login::render(&mut terminal, &qr_code)
+        }
+
+        Command::List => {
+            let file = File::open("./test_data/listing")?;
+            let listing: Vec<model::ContentSpec> = serde_json::from_reader(file)?;
+            cli::inbox::print(&listing)
+        }
+
+        _ => Err(Error::AppError("There is no preview for that command".to_string())),
     }
 }
 
