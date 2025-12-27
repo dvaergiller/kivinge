@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::path::PathBuf;
 
-use crate::error::Error;
 use super::model::UserId;
+use crate::error::Error;
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct UserInfo {

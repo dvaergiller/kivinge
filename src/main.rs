@@ -1,7 +1,11 @@
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
-use clap_complete::{self, shells::{Bash, PowerShell, Zsh}, Generator};
+use clap_complete::{
+    self,
+    shells::{Bash, PowerShell, Zsh},
+    Generator,
+};
 use kivinge::kivra::{request, session};
-use kivinge::{error::Error, terminal, cli, tui};
+use kivinge::{cli, error::Error, terminal, tui};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -99,8 +103,6 @@ fn load_session_or_login(client: &request::Client) -> Result<session::Session, E
             session::save(&session)?;
             Ok(session)
         }
-        None => {
-            Err(Error::AppError("Login aborted".to_string()))
-        }
+        None => Err(Error::AppError("Login aborted".to_string())),
     }
 }

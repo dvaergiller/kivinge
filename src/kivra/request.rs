@@ -1,6 +1,6 @@
-use crate::error::Error;
 use super::model::*;
 use super::session::Session;
+use crate::error::Error;
 
 pub type Client = reqwest::blocking::Client;
 
@@ -13,10 +13,10 @@ pub fn client() -> Client {
 
 pub fn get_config(client: &Client) -> Result<Config, Error> {
     Ok(client
-       .get(format!("{ACCOUNTS_URL}/config.json"))
-       .send()?
-       .error_for_status()?
-       .json()?)
+        .get(format!("{ACCOUNTS_URL}/config.json"))
+        .send()?
+        .error_for_status()?
+        .json()?)
 }
 
 pub fn start_auth(client: &Client, config: &Config) -> Result<(String, AuthResponse), Error> {
@@ -43,10 +43,10 @@ pub fn start_auth(client: &Client, config: &Config) -> Result<(String, AuthRespo
 
 pub fn check_auth(client: &Client, poll_url: &String) -> Result<AuthStatus, Error> {
     Ok(client
-       .get(format!("{API_URL}{poll_url}"))
-       .send()?
-       .error_for_status()?
-       .json()?)
+        .get(format!("{API_URL}{poll_url}"))
+        .send()?
+        .error_for_status()?
+        .json()?)
 }
 
 pub fn abort_auth(client: &Client, poll_url: &String) -> Result<(), Error> {
@@ -93,10 +93,10 @@ pub fn revoke_auth_token(client: &Client, session: Session) -> Result<(), Error>
 pub fn get_inbox_listing(client: &Client, session: &Session) -> Result<Vec<ContentSpec>, Error> {
     let user_id = &session.user_info.kivra_user_id;
     Ok(client
-       .get(format!("{API_URL}/v3/user/{user_id}/content"))
-       .query(&[("listing", "all")])
-       .bearer_auth(&session.access_token)
-       .send()?
-       .error_for_status()?
-       .json()?)
+        .get(format!("{API_URL}/v3/user/{user_id}/content"))
+        .query(&[("listing", "all")])
+        .bearer_auth(&session.access_token)
+        .send()?
+        .error_for_status()?
+        .json()?)
 }

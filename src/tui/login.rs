@@ -1,10 +1,10 @@
-use crossterm::event::{Event, KeyCode, poll, read};
+use crossterm::event::{poll, read, Event, KeyCode};
 use std::time::Duration;
 
+use super::qr;
+use crate::error::Error;
 use crate::kivra::{model, request};
 use crate::terminal::{self, prelude, widgets, LoadedTerminal};
-use crate::error::Error;
-use super::qr;
 
 struct State {
     qr_code: String,
@@ -31,9 +31,9 @@ pub fn show(terminal: &mut terminal::LoadedTerminal, client: &request::Client) -
             match read()? {
                 Event::Key(key) if key.code == KeyCode::Char('q') => {
                     request::abort_auth(client, &state.next_poll_url)?;
-                    return Ok(None)
+                    return Ok(None);
                 }
-                _ => ()
+                _ => (),
             }
         }
 
@@ -45,7 +45,8 @@ pub fn show(terminal: &mut terminal::LoadedTerminal, client: &request::Client) -
                 state.retry_after = check.retry_after.unwrap_or(state.retry_after);
             }
             Some(_) => {
-                return request::get_auth_token(client, &config, auth_resp.code, verifier).map(Some);
+                return request::get_auth_token(client, &config, auth_resp.code, verifier)
+                    .map(Some);
             }
         }
     }
