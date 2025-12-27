@@ -6,7 +6,7 @@ use ratatui::{
     Frame,
 };
 
-use super::{keymap::KeyEvent, Command, Event, Error, TuiView};
+use super::{keymap::KeyEvent, Command, Error, Event, TuiView};
 use crate::{
     client::Client,
     model::content::{InboxEntry, InboxListing, Status},

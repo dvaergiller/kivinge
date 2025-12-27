@@ -37,12 +37,8 @@ fn get_attachment_body(
         (None, None) => Err(Error::AppError(
             "Attachment has no attachment key nor inline body",
         )),
-        (Some(key), _) => {
-            Ok(client.download_attachment(&item.key, key)?)
-        },
-        (_, Some(body)) => {
-            Ok(Bytes::copy_from_slice(body.as_bytes()))
-        },
+        (Some(key), _) => Ok(client.download_attachment(&item.key, key)?),
+        (_, Some(body)) => Ok(Bytes::copy_from_slice(body.as_bytes())),
     }
 }
 

@@ -2,7 +2,7 @@ use bytes::Bytes;
 use reqwest::blocking::{RequestBuilder, Response};
 
 use super::session::{self, Session};
-use super::{Error, Client};
+use super::{Client, Error};
 use crate::model::{auth::*, content::*, Config};
 use crate::tui;
 
@@ -18,12 +18,12 @@ pub struct KivraClient {
 impl KivraClient {
     pub fn with_session(
         &mut self,
-        request: RequestBuilder
+        request: RequestBuilder,
     ) -> Result<Response, Error> {
-        match self.try_with_session(request.try_clone().ok_or(Error::CloneError)?) {
-            Ok(response) => {
-                Ok(response)
-            }
+        match self
+            .try_with_session(request.try_clone().ok_or(Error::CloneError)?)
+        {
+            Ok(response) => Ok(response),
             Err(Error::NoSession) => {
                 self.get_session_or_login()?;
                 self.try_with_session(request)
@@ -32,9 +32,7 @@ impl KivraClient {
                 self.get_session_or_login()?;
                 self.try_with_session(request)
             }
-            Err(error) => {
-                Err(error)
-            }
+            Err(error) => Err(error),
         }
     }
 
@@ -44,9 +42,9 @@ impl KivraClient {
     ) -> Result<Response, Error> {
         let session = self.session.as_ref().ok_or(Error::NoSession)?;
         Ok(request
-           .bearer_auth(&session.access_token)
-           .send()?
-           .error_for_status()?)
+            .bearer_auth(&session.access_token)
+            .send()?
+            .error_for_status()?)
     }
 }
 
@@ -129,8 +127,7 @@ impl Client for KivraClient {
 
     fn revoke_auth_token(&mut self) -> Result<(), Error> {
         if let Some(session) = self.get_or_load_session()? {
-            self
-                .client
+            self.client
                 .post(format!("{API_URL}/v2/oauth2/token/revoke"))
                 .json(&RevokeRequest {
                     token: session.access_token.clone(),
@@ -145,13 +142,13 @@ impl Client for KivraClient {
     fn get_inbox_listing(&mut self) -> Result<InboxListing, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let listing = self.with_session(
-            self
-                .client
-                .get(format!("{API_URL}/v3/user/{user_id}/content"))
-                .query(&[("listing", "all")])
-        )?
-        .json()?;
+        let listing = self
+            .with_session(
+                self.client
+                    .get(format!("{API_URL}/v3/user/{user_id}/content"))
+                    .query(&[("listing", "all")]),
+            )?
+            .json()?;
         Ok(InboxListing::from_content_specs(listing))
     }
 
@@ -174,7 +171,7 @@ impl Client for KivraClient {
                 .post(format!(
                     "{API_URL}/v2/user/{user_id}/content/{item_key}/view"
                 ))
-                .header("content-type", "application/json")
+                .header("content-type", "application/json"),
         )?;
         Ok(())
     }
@@ -217,10 +214,11 @@ impl Client for KivraClient {
         };
 
         let mut terminal = tui::terminal::load().map_err(to_dyn_boxed)?;
-        let mut login_view = tui::login::LoginView::make(self)
-            .map_err(to_dyn_boxed)?;
+        let mut login_view =
+            tui::login::LoginView::make(self).map_err(to_dyn_boxed)?;
         match tui::show(&mut login_view, &mut terminal, None)
-            .map_err(to_dyn_boxed)? {
+            .map_err(to_dyn_boxed)?
+        {
             Some(auth_response) => {
                 let session = session::make(
                     auth_response.access_token,

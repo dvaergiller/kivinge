@@ -82,7 +82,6 @@ pub trait Client {
 
     fn get_session(&self) -> Option<Session>;
 
-
     fn get_or_load_session(&mut self) -> Result<Option<Session>, Error>;
 
     fn get_session_or_login(&mut self) -> Result<Session, Error>;
@@ -127,7 +126,7 @@ impl Client for Box<dyn Client> {
 
     fn get_item_details(
         &mut self,
-        item_key: &str
+        item_key: &str,
     ) -> Result<ItemDetails, Error> {
         (**self).get_item_details(item_key)
     }

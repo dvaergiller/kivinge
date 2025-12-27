@@ -1,9 +1,14 @@
 use std::{
-    cmp::min, ffi::OsStr, fmt::{Display, Formatter}, ops::{Shl, Shr}, path::Path, time::{Duration, UNIX_EPOCH}
+    cmp::min,
+    ffi::OsStr,
+    fmt::{Display, Formatter},
+    ops::{Shl, Shr},
+    path::Path,
+    time::{Duration, UNIX_EPOCH},
 };
 
 use bytes::Bytes;
-use cached::{SizedCache, TimedCache, TimedSizedCache, Cached};
+use cached::{Cached, SizedCache, TimedCache, TimedSizedCache};
 use fuser::{
     mount2, FileAttr, FileType, Filesystem, MountOption, ReplyData,
     ReplyDirectory, Request,
@@ -14,7 +19,7 @@ use tracing::{debug, error, warn};
 
 use crate::{
     client::Client,
-    model::content::{Attachment, InboxEntry, InboxListing, ItemDetails}
+    model::content::{Attachment, InboxEntry, InboxListing, ItemDetails},
 };
 
 #[derive(Debug, Clone, Error, PartialEq)]
@@ -41,27 +46,27 @@ impl Error {
             Error::NotFound => {
                 debug!("{}", self);
                 ENOENT
-            },
+            }
 
             Error::InternalError(_) => {
                 error!("{}", self);
                 EFAULT
-            },
+            }
 
             Error::Invalid => {
                 warn!("{}", self);
                 EINVAL
-            },
+            }
 
             Error::IsDir => {
                 debug!("{}", self);
                 EISDIR
-            },
+            }
 
             Error::IsNotDir => {
                 debug!("{}", self);
                 ENOTDIR
-            },
+            }
         }
     }
 }
@@ -74,13 +79,15 @@ pub fn mount(
     client: &mut impl Client,
     mountpoint: &Path,
 ) -> Result<(), std::io::Error> {
-    let filesystem =
-        KivraFS {
-            client,
-            inbox_cache: TimedSizedCache::with_size_and_lifespan(1, INBOX_TTL.into()),
-            details_cache: TimedCache::with_lifespan(DETAILS_TTL.into()),
-            attachment_cache: SizedCache::with_size(10),
-        };
+    let filesystem = KivraFS {
+        client,
+        inbox_cache: TimedSizedCache::with_size_and_lifespan(
+            1,
+            INBOX_TTL.into(),
+        ),
+        details_cache: TimedCache::with_lifespan(DETAILS_TTL.into()),
+        attachment_cache: SizedCache::with_size(10),
+    };
     let mount_options = [
         MountOption::FSName("kivinge".to_string()),
         MountOption::DefaultPermissions,
@@ -109,34 +116,32 @@ impl Inode {
     fn to_u64(&self) -> u64 {
         match self {
             Inode::Root => 1,
-            Inode::InboxEntry { entry, .. } =>
-                (entry.id as u64 + 1).shl(32),
-            Inode::Attachment { inbox_entry_id, attachment_id, .. } =>
-                (*inbox_entry_id as u64 + 1).shl(32) +
-                (*attachment_id as u64 + 1),
+            Inode::InboxEntry { entry, .. } => (entry.id as u64 + 1).shl(32),
+            Inode::Attachment { inbox_entry_id, attachment_id, .. } => {
+                (*inbox_entry_id as u64 + 1).shl(32)
+                    + (*attachment_id as u64 + 1)
+            }
         }
     }
 
     fn entry_id(inode_id: u64) -> Option<u32> {
         match inode_id.shr(32) as u32 {
             0 => None,
-            i => Some(i - 1)
+            i => Some(i - 1),
         }
     }
 
     fn attachment_id(inode_id: u64) -> Option<u32> {
         match inode_id as u32 {
             0 => None,
-            i => Some(i - 1)
+            i => Some(i - 1),
         }
     }
 
     fn attr(&self) -> FileAttr {
         let (kind, perm, size, nlink) = match self {
             Inode::Root => (FileType::Directory, 0o500, 0u64, 2),
-            Inode::InboxEntry { .. } => {
-                (FileType::Directory, 0o500, 0u64, 2)
-            }
+            Inode::InboxEntry { .. } => (FileType::Directory, 0o500, 0u64, 2),
             Inode::Attachment { attachment, .. } => {
                 (FileType::RegularFile, 0o400, attachment.size as u64, 1)
             }
@@ -177,15 +182,13 @@ struct KivraFS<'a, C: Client> {
 
 impl<'a, C: Client> KivraFS<'a, C> {
     fn inbox_listing(&mut self) -> Result<InboxListing, Error> {
-        self.inbox_cache.cache_try_get_or_set_with(
-            (),
-            || {
-                self
-                    .client
+        self.inbox_cache
+            .cache_try_get_or_set_with((), || {
+                self.client
                     .get_inbox_listing()
                     .map_err(|err| Error::InternalError(err.to_string()))
-            }
-        ).cloned()
+            })
+            .cloned()
     }
 
     fn inbox_entry(&mut self, entry_id: u32) -> Result<InboxEntry, Error> {
@@ -198,21 +201,19 @@ impl<'a, C: Client> KivraFS<'a, C> {
     }
 
     fn details(&mut self, entry: &InboxEntry) -> Result<ItemDetails, Error> {
-        self.details_cache.cache_try_get_or_set_with(
-            entry.id,
-            || {
-                self
-                    .client
+        self.details_cache
+            .cache_try_get_or_set_with(entry.id, || {
+                self.client
                     .get_item_details(&entry.item.key)
                     .map_err(|err| Error::InternalError(err.to_string()))
-            }
-        ).cloned()
+            })
+            .cloned()
     }
 
     fn attachment(
         &mut self,
         entry_id: u32,
-        attachment_id: u32
+        attachment_id: u32,
     ) -> Result<Attachment, Error> {
         let entry = self.inbox_entry(entry_id)?;
         let details = self.details(&entry)?;
@@ -230,35 +231,27 @@ impl<'a, C: Client> KivraFS<'a, C> {
         attachment_id: u32,
     ) -> Result<Bytes, Error> {
         let attachment = self.attachment(entry_id, attachment_id)?;
-        self.attachment_cache.cache_try_get_or_set_with(
-            (entry_id, attachment_id),
-            || {
+        self.attachment_cache
+            .cache_try_get_or_set_with((entry_id, attachment_id), || {
                 match (attachment.body, attachment.key) {
                     (Some(inline_body), _) => {
                         Ok(inline_body.into_bytes().into())
                     }
-                    (_, Some(attachment_key)) => {
-                        Ok(self
-                           .client
-                           .download_attachment(item_key, &attachment_key)
-                           .map_err(|err|
-                                    Error::InternalError(err.to_string())
-                           )?
-                        )
-                    }
-                    (None, None) => {
-                        Err(Error::Invalid)
-                    }
+                    (_, Some(attachment_key)) => Ok(self
+                        .client
+                        .download_attachment(item_key, &attachment_key)
+                        .map_err(|err| {
+                            Error::InternalError(err.to_string())
+                        })?),
+                    (None, None) => Err(Error::Invalid),
                 }
-            }
-        ).cloned()
+            })
+            .cloned()
     }
 
     fn inode(&mut self, inode_id: u64) -> Result<Inode, Error> {
         match (Inode::entry_id(inode_id), Inode::attachment_id(inode_id)) {
-            (None, _) => {
-                Ok(Inode::Root)
-            }
+            (None, _) => Ok(Inode::Root),
             (Some(entry_id), None) => {
                 Ok(Inode::InboxEntry { entry: self.inbox_entry(entry_id)? })
             }
@@ -277,52 +270,42 @@ impl<'a, C: Client> KivraFS<'a, C> {
 
     fn inode_children(
         &mut self,
-        parent_id: u64
+        parent_id: u64,
     ) -> Result<Vec<(String, Inode)>, Error> {
         match self.inode(parent_id)? {
-            Inode::Root => {
-                Ok(self
-                   .inbox_listing()?
-                   .into_iter()
-                   .map(|entry|
-                        (entry.item.name(), Inode::InboxEntry { entry })
-                   )
-                   .collect())
-            },
+            Inode::Root => Ok(self
+                .inbox_listing()?
+                .into_iter()
+                .map(|entry| (entry.item.name(), Inode::InboxEntry { entry }))
+                .collect()),
             Inode::InboxEntry { entry } => {
                 let details = self.details(&entry)?;
                 Ok(details
-                   .parts
-                   .iter()
-                   .enumerate()
-                   .filter_map(|(idx, attachment)| {
-                       let name = details.attachment_name(idx).ok()?;
-                       let inode = Inode::Attachment {
-                           inbox_entry_id: entry.id,
-                           item_key: entry.item.key.clone(),
-                           attachment_id: idx as u32,
-                           attachment: attachment.clone(),
-                       };
-                       Some((name, inode))
-                   })
-                   .collect())
-            },
-            Inode::Attachment { .. } => {
-                Err(Error::IsNotDir)
+                    .parts
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(idx, attachment)| {
+                        let name = details.attachment_name(idx).ok()?;
+                        let inode = Inode::Attachment {
+                            inbox_entry_id: entry.id,
+                            item_key: entry.item.key.clone(),
+                            attachment_id: idx as u32,
+                            attachment: attachment.clone(),
+                        };
+                        Some((name, inode))
+                    })
+                    .collect())
             }
-            // _ => {
-            //     Err(Error::Invalid)
-            // }
+            Inode::Attachment { .. } => Err(Error::IsNotDir),
         }
     }
 
     fn inode_by_name(
         &mut self,
         parent_id: u64,
-        name: &str
+        name: &str,
     ) -> Result<Inode, Error> {
-        self
-            .inode_children(parent_id)?
+        self.inode_children(parent_id)?
             .into_iter()
             .find_map(|(child_name, inode)| {
                 (child_name == name).then_some(inode)
@@ -375,11 +358,16 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
     ) {
         match self.inode(ino) {
             Err(error) => reply.error(error.error_code()),
-            Ok(Inode::Attachment { inbox_entry_id, item_key, attachment_id, .. }) => {
+            Ok(Inode::Attachment {
+                inbox_entry_id,
+                item_key,
+                attachment_id,
+                ..
+            }) => {
                 let res = self.attachment_contents(
                     inbox_entry_id,
                     &item_key,
-                    attachment_id
+                    attachment_id,
                 );
                 match res {
                     Ok(data) => {
@@ -408,10 +396,8 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
             Err(error) => {
                 reply.error(error.error_code());
                 return;
-            },
-            Ok(children) => {
-                children
             }
+            Ok(children) => children,
         };
 
         let after_offset = &children[(offset as usize)..];
@@ -433,7 +419,8 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                 inode.to_u64(),
                 add_offset,
                 inode.attr().kind,
-                OsStr::new(&name)) {
+                OsStr::new(&name),
+            ) {
                 debug!("output buffer full, stopping");
                 break;
             }

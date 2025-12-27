@@ -1,8 +1,8 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use std::fs::File;
 use std::path::PathBuf;
+use thiserror::Error;
 
 use crate::model::UserId;
 
@@ -105,9 +105,8 @@ pub fn make(access_token: String, id_token: String) -> Result<Session, Error> {
 
 fn extract_user_info(id_token: &str) -> Result<UserInfo, Error> {
     let sections = id_token.split('.').collect::<Vec<&str>>();
-    let claims_base64 = sections.get(1).ok_or(
-        Error::JWTError("Too few sections")
-    )?;
+    let claims_base64 =
+        sections.get(1).ok_or(Error::JWTError("Too few sections"))?;
     let claims_json = URL_SAFE_NO_PAD.decode(claims_base64)?;
     Ok(serde_json::from_slice(claims_json.as_slice())?)
 }

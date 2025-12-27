@@ -65,7 +65,10 @@ impl Client for MockClient {
         Ok(InboxListing::from_content_specs(listing))
     }
 
-    fn get_item_details(&mut self, _item_key: &str) -> Result<ItemDetails, Error> {
+    fn get_item_details(
+        &mut self,
+        _item_key: &str,
+    ) -> Result<ItemDetails, Error> {
         let input = include_str!("test_data/details.json");
         let details = serde_json::from_str(input)?;
         Ok(details)
@@ -76,7 +79,7 @@ impl Client for MockClient {
     }
 
     fn download_attachment(
-         &mut self,
+        &mut self,
         _item_key: &str,
         _attachment_key: &str,
     ) -> Result<Bytes, Error> {

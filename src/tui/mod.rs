@@ -104,8 +104,7 @@ fn render_main(frame: &mut Frame, user_info: Option<&UserInfo>) -> Rect {
         .constraints(vec![Constraint::Fill(1), Constraint::Fill(1)])
         .split(layout[0]);
 
-    let title =
-        Paragraph::new("Kivinge")
+    let title = Paragraph::new("Kivinge")
         .bold()
         .fg(ratatui::style::Color::Black)
         .bg(ratatui::style::Color::Green);

@@ -7,11 +7,11 @@ use ratatui::widgets::{
 use ratatui::{symbols, Frame};
 use std::fmt::Display;
 
+use super::keymap::KeyEvent;
+use super::{Command, Error, Event, TuiView};
 use crate::client::Client;
 use crate::model::content::Status;
 use crate::model::content::{InboxItem, ItemDetails};
-use super::keymap::KeyEvent;
-use super::{Command, Event, Error, TuiView};
 
 pub struct ItemView {
     item: InboxItem,

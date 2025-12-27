@@ -8,14 +8,12 @@ use std::path::PathBuf;
 
 use kivinge::{
     cli,
-    client::{self, Client, session},
+    client::{self, session, Client},
     error::Error,
     fuse,
     model::content::InboxItem,
     tui::{self, inbox_item::ItemViewResult, terminal::LoadedTerminal},
-    util::{
-        download_attachment, get_entry_by_id, open_attachment,
-    },
+    util::{download_attachment, get_entry_by_id, open_attachment},
 };
 
 #[derive(Parser, Debug)]
@@ -189,8 +187,7 @@ fn show_inbox_item_tui(
     client: &mut impl Client,
     item: InboxItem,
 ) -> Result<(), Error> {
-    let mut entry_view =
-        tui::inbox_item::ItemView::make(client, item.clone())?;
+    let mut entry_view = tui::inbox_item::ItemView::make(client, item.clone())?;
     loop {
         let user_info = client.get_session().map(|s| s.user_info);
         let ret = tui::show(&mut entry_view, terminal, user_info)?;

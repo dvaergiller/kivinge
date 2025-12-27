@@ -1,7 +1,7 @@
 use ratatui::{layout::Rect, prelude, widgets};
 use std::time::Duration;
 
-use super::{keymap::KeyEvent, qr, Command, Event, Error, TuiView};
+use super::{keymap::KeyEvent, qr, Command, Error, Event, TuiView};
 use crate::{
     client::Client,
     model::{
