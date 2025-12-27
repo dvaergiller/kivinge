@@ -1,5 +1,4 @@
 use chrono::{Local, TimeZone};
-use crossterm::event::{read, Event, KeyCode};
 use ratatui::{
     layout::Constraint,
     style::{Modifier, Style},
@@ -13,6 +12,8 @@ use crate::{
     terminal::LoadedTerminal, tui::content,
 };
 
+use super::keymap::{read_key, KeyCommand};
+
 pub fn show(
     client: &impl Client,
     session: &Session,
@@ -20,15 +21,14 @@ pub fn show(
     inbox: InboxListing,
 ) -> Result<(), Error> {
     let mut widget_state = TableState::new().with_selected(0);
-    let mut expanded = false;
     loop {
-        render(terminal, &inbox, &mut widget_state, expanded)?;
-        match read()? {
-            Event::Key(key) if key.code == KeyCode::Char('q') => {
+        render(terminal, &inbox, &mut widget_state)?;
+        match read_key()? {
+            KeyCommand::Quit => {
                 return Ok(());
             }
 
-            Event::Key(key) if key.code == KeyCode::Up => {
+            KeyCommand::Up => {
                 let select = match widget_state.selected().unwrap_or(0) {
                     0 => 0,
                     n => n - 1,
@@ -36,7 +36,7 @@ pub fn show(
                 widget_state.select(Some(select));
             }
 
-            Event::Key(key) if key.code == KeyCode::Down => {
+            KeyCommand::Down => {
                 let select = match widget_state.selected().unwrap_or(0) {
                     n if n >= inbox.len() => n,
                     n => n + 1,
@@ -44,7 +44,7 @@ pub fn show(
                 widget_state.select(Some(select));
             }
 
-            Event::Key(key) if key.code == KeyCode::Enter => {
+            KeyCommand::Select => {
                 match widget_state.selected() {
                     None => (),
                     Some(selected) => {
@@ -55,10 +55,6 @@ pub fn show(
                     }
                 }
             }
-
-            Event::Key(key) if key.code == KeyCode::Tab => {
-                expanded = !expanded;
-            }
             _ => (),
         }
     }
@@ -68,9 +64,8 @@ pub fn render(
     terminal: &mut LoadedTerminal,
     inbox: &InboxListing,
     widget_state: &mut TableState,
-    expanded: bool,
 ) -> Result<(), Error> {
-    let widget = inbox_widget(inbox, expanded);
+    let widget = inbox_widget(inbox);
     let draw = |frame: &mut Frame| {
         frame.render_stateful_widget(widget, frame.size(), widget_state);
     };
@@ -78,7 +73,7 @@ pub fn render(
     Ok(())
 }
 
-fn inbox_widget(inbox: &InboxListing, expanded: bool) -> Table<'static> {
+fn inbox_widget(inbox: &InboxListing) -> Table<'static> {
     let rows = inbox.iter().map(inbox_row);
     let max_id_len = inbox
         .iter()
@@ -92,11 +87,9 @@ fn inbox_widget(inbox: &InboxListing, expanded: bool) -> Table<'static> {
         Constraint::Length(16),
     ];
 
-    let highlight_symbol = if expanded { "v " } else { "> " };
-
     Table::new(rows, widths)
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
-        .highlight_symbol(highlight_symbol)
+        .highlight_symbol("> ")
         .block(Block::bordered().border_type(BorderType::Rounded))
 }
 

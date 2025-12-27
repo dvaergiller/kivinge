@@ -1,4 +1,3 @@
-use crossterm::event::{read, Event, KeyCode};
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Style, Stylize};
 use ratatui::widgets::{Block, Borders, List, ListDirection, Paragraph};
@@ -11,6 +10,8 @@ use crate::{
     terminal::LoadedTerminal,
 };
 
+use super::keymap::{read_key, KeyCommand};
+
 pub fn show(
     terminal: &mut LoadedTerminal,
     item: &InboxItem,
@@ -18,8 +19,9 @@ pub fn show(
 ) -> Result<(), Error> {
     loop {
         render(terminal, item, details)?;
-        match read()? {
-            Event::Key(key) if key.code == KeyCode::Char('q') => {
+        match read_key()? {
+            KeyCommand::Quit
+                | KeyCommand::Back => {
                 return Ok(());
             }
             _ => (),
