@@ -74,10 +74,11 @@ impl Inode {
                 (FileType::RegularFile, 0o400, *size)
             }
         };
+        let blksize = 512u32;
         FileAttr {
             ino: self.to_u64(),
             size,
-            blocks: 1,
+            blocks: size.div_ceil(blksize as u64),
             atime: UNIX_EPOCH, // 1970-01-01 00:00:00
             mtime: UNIX_EPOCH,
             ctime: UNIX_EPOCH,
@@ -89,7 +90,7 @@ impl Inode {
             gid: 1001,
             rdev: 0,
             flags: 0,
-            blksize: 512,
+            blksize,
         }
     }
 }
@@ -316,7 +317,7 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
             }
 
             Inode::Attachment { .. } => {
-                reply.error(EINVAL);
+                reply.error(EINVAL); // Not a directory
                 return;
             }
         };
@@ -344,5 +345,3 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         reply.ok();
     }
 }
-// asociety
-//     afry
