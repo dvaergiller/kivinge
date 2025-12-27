@@ -1,5 +1,6 @@
 use bytes::Bytes;
 use reqwest::blocking::{RequestBuilder, Response};
+use tracing::instrument;
 
 use super::session::{self, Session};
 use super::{Client, Error};
@@ -49,6 +50,7 @@ impl KivraClient {
 }
 
 impl Client for KivraClient {
+    #[instrument(skip(self))]
     fn get_config(&self) -> Result<Config, Error> {
         Ok(self
             .client
@@ -58,6 +60,7 @@ impl Client for KivraClient {
             .json()?)
     }
 
+    #[instrument(skip(self))]
     fn start_auth(
         &self,
         config: &Config,
@@ -84,6 +87,7 @@ impl Client for KivraClient {
         Ok((verifier, resp))
     }
 
+    #[instrument(skip(self))]
     fn check_auth(&self, poll_url: &str) -> Result<AuthStatus, Error> {
         Ok(self
             .client
@@ -93,6 +97,7 @@ impl Client for KivraClient {
             .json()?)
     }
 
+    #[instrument(skip(self))]
     fn abort_auth(&self, poll_url: &str) -> Result<(), Error> {
         self.client
             .delete(format!("{API_URL}{poll_url}"))
@@ -101,6 +106,7 @@ impl Client for KivraClient {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     fn get_auth_token(
         &self,
         config: &Config,
@@ -125,6 +131,7 @@ impl Client for KivraClient {
         Ok(resp.json()?)
     }
 
+    #[instrument(skip(self))]
     fn revoke_auth_token(&mut self) -> Result<(), Error> {
         if let Some(session) = self.get_or_load_session()? {
             self.client
@@ -139,6 +146,7 @@ impl Client for KivraClient {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     fn get_inbox_listing(&mut self) -> Result<InboxListing, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
@@ -152,6 +160,7 @@ impl Client for KivraClient {
         Ok(InboxListing::from_content_specs(listing))
     }
 
+    #[instrument(skip(self))]
     fn get_item_details(
         &mut self,
         item_key: &str,
@@ -163,6 +172,7 @@ impl Client for KivraClient {
         Ok(details)
     }
 
+    #[instrument(skip(self))]
     fn mark_as_read(&mut self, item_key: &str) -> Result<(), Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
@@ -176,6 +186,7 @@ impl Client for KivraClient {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     fn download_attachment(
         &mut self,
         item_key: &str,
@@ -190,10 +201,12 @@ impl Client for KivraClient {
         Ok(attachment)
     }
 
+    #[instrument(skip(self))]
     fn get_session(&self) -> Option<Session> {
         self.session.clone()
     }
 
+    #[instrument(skip(self))]
     fn get_or_load_session(&mut self) -> Result<Option<Session>, Error> {
         if let Some(session) = &self.session {
             return Ok(Some(session.clone()));
@@ -204,6 +217,7 @@ impl Client for KivraClient {
         Ok(opt_session)
     }
 
+    #[instrument(skip(self))]
     fn get_session_or_login(&mut self) -> Result<Session, Error> {
         if let Some(session) = self.get_or_load_session()? {
             return Ok(session);

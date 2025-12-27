@@ -5,6 +5,7 @@ use clap_complete::{
     Generator,
 };
 use std::path::PathBuf;
+use tracing_subscriber::{fmt::{self, format::FmtSpan}, EnvFilter, prelude::*};
 
 use kivinge::{
     cli,
@@ -72,7 +73,10 @@ enum CompletionsShell {
 }
 
 fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_span_events(FmtSpan::ENTER))
+        .with(EnvFilter::from_env("LOGLEVEL"))
+        .init();
 
     let cli_args = CliArgs::parse();
     match run(cli_args) {
