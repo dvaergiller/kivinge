@@ -6,7 +6,25 @@ digital mailbox service.
 **Disclaimer: This project is not affiliated with, supported by, or endorsed by
 Kivra in any way. Do not contact Kivra for support or other requests regarding
 this client. This client may break at any time if Kivra publishes changes to
-their service, which they are free to do.**
+their service.**
+
+## Prerequisites
+
+- Rust toolchain (install via [rustup](https://rustup.rs/))
+- OpenSSL development libraries
+- libfuse3 development libraries
+
+On Debian/Ubuntu:
+
+```bash
+sudo apt install libssl-dev libfuse3-dev
+```
+
+On Arch Linux:
+
+```bash
+sudo pacman -S openssl fuse3
+```
 
 ## Installation
 
