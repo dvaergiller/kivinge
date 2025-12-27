@@ -53,8 +53,7 @@ impl Client for Box<dyn Client> {
         config: &Config,
         auth_code: AuthCode,
         verifier: CodeVerifier,
-    ) -> Result<AuthTokenResponse, Error>
-    {
+    ) -> Result<AuthTokenResponse, Error> {
         (**self).get_auth_token(config, auth_code, verifier)
     }
 

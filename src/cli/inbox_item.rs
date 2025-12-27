@@ -3,7 +3,8 @@ use chrono::{Local, TimeZone};
 use crate::kivra::model::ItemDetails;
 
 pub fn print(details: ItemDetails) {
-    let local_datetime = Local.from_utc_datetime(&details.created_at.naive_utc())
+    let local_datetime = Local
+        .from_utc_datetime(&details.created_at.naive_utc())
         .format("%Y-%m-%d %H:%M")
         .to_string();
 

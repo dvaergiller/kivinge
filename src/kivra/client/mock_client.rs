@@ -7,12 +7,14 @@ use crate::kivra::model::*;
 use crate::kivra::session::Session;
 
 pub struct MockClient {
-    check_auth_calls: RefCell<u32>
+    check_auth_calls: RefCell<u32>,
 }
 
 impl MockClient {
     pub fn new() -> MockClient {
-        MockClient { check_auth_calls: RefCell::new(0) }
+        MockClient {
+            check_auth_calls: RefCell::new(0),
+        }
     }
 }
 
@@ -69,7 +71,7 @@ impl Client for MockClient {
     fn get_item_details(
         &self,
         _session: &Session,
-        _item_key: String
+        _item_key: String,
     ) -> Result<ItemDetails, Error> {
         let details = serde_json::from_str(include_str!("test_data/details.json"))?;
         Ok(details)

@@ -58,12 +58,11 @@ fn generate_completions<G: Generator>(gen: G) {
 }
 
 fn run(cli_args: CliArgs) -> Result<(), Error> {
-    let client: Box<dyn Client> =
-        if cli_args.mock {
-            Box::new(client::MockClient::new())
-        } else {
-            Box::new(client::KivraClient::new())
-        };
+    let client: Box<dyn Client> = if cli_args.mock {
+        Box::new(client::MockClient::new())
+    } else {
+        Box::new(client::KivraClient::new())
+    };
 
     match cli_args.command {
         Command::Completions {
@@ -96,9 +95,12 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
         Command::View { item_id } => {
             let session = load_session_or_login(&client)?;
             let inbox = client.get_inbox_listing(&session)?;
-            let entry = inbox.into_iter()
+            let entry = inbox
+                .into_iter()
                 .find(|i| i.id == item_id)
-                .ok_or(Error::UserError(format!("Inbox item {item_id} does not exist")))?;
+                .ok_or(Error::UserError(format!(
+                    "Inbox item {item_id} does not exist"
+                )))?;
             let details = client.get_item_details(&session, entry.item.key)?;
             cli::inbox_item::print(details);
             Ok(())

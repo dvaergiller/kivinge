@@ -8,7 +8,7 @@ use ratatui::{symbols, Frame};
 
 use crate::{
     error::Error,
-    kivra::model::{ItemDetails, InboxItem},
+    kivra::model::{InboxItem, ItemDetails},
     terminal::LoadedTerminal,
 };
 

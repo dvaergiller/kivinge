@@ -149,7 +149,11 @@ impl IntoIterator for InboxListing {
 impl InboxListing {
     pub fn from_content_specs(mut vec: Vec<InboxItem>) -> InboxListing {
         vec.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-        let listing = vec.into_iter().zip(1..).map(|(item, id)| InboxEntry { id, item }).collect();
+        let listing = vec
+            .into_iter()
+            .zip(1..)
+            .map(|(item, id)| InboxEntry { id, item })
+            .collect();
         InboxListing(listing)
     }
 }

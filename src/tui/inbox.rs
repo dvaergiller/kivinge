@@ -7,7 +7,11 @@ use ratatui::{
     Frame,
 };
 
-use crate::{error::Error, kivra::model::{InboxEntry, InboxListing}, terminal::LoadedTerminal};
+use crate::{
+    error::Error,
+    kivra::model::{InboxEntry, InboxListing},
+    terminal::LoadedTerminal,
+};
 
 pub fn show(terminal: &mut LoadedTerminal, inbox: InboxListing) -> Result<(), Error> {
     let mut widget_state = TableState::new().with_selected(0);
