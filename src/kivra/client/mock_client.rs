@@ -64,9 +64,20 @@ impl Client for MockClient {
     fn get_item_details(
         &self,
         _session: &Session,
-        _item_key: String,
+        _item_key: &String,
     ) -> Result<ItemDetails, Error> {
         let details = serde_json::from_str(include_str!("test_data/details.json"))?;
         Ok(details)
+    }
+
+    fn download_attachment(
+        &self,
+        _session: &Session,
+        _item_key: &String,
+        _attachment_key: &String,
+    ) -> Result<Vec<u8>, Error> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice("tjena".as_bytes());
+        Ok(bytes)
     }
 }

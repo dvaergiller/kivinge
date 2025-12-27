@@ -3,6 +3,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, ops::Deref};
 
+use crate::error::Error;
+
 pub type UserId = String;
 
 #[derive(Deserialize, Debug)]
@@ -164,6 +166,29 @@ pub struct ItemDetails {
     pub sender_name: String,
     pub created_at: DateTime<Utc>,
     pub parts: Vec<Attachment>,
+}
+
+impl ItemDetails {
+    pub fn attachment_name(&self, index: usize) -> Result<String, Error> {
+        let attachment = self.parts.get(index).ok_or(Error::AppError(
+            "Attachment index out of bounds".to_string(),
+        ))?;
+        let file_extension = match attachment.content_type.as_str() {
+            "application/pdf" => "pdf",
+            "text/html" => "html",
+            _ => "txt",
+        };
+
+        Ok(format!(
+            "{}-{}-{}-{}.{}",
+            self.created_at.to_rfc3339(),
+            self.sender_name,
+            self.subject,
+            index,
+            file_extension
+        )
+        .replace(" ", "_"))
+    }
 }
 
 pub type AttachmentKey = String;

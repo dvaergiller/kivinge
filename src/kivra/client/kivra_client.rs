@@ -112,7 +112,7 @@ impl Client for KivraClient {
         Ok(InboxListing::from_content_specs(listing))
     }
 
-    fn get_item_details(&self, session: &Session, item_key: String) -> Result<ItemDetails, Error> {
+    fn get_item_details(&self, session: &Session, item_key: &String) -> Result<ItemDetails, Error> {
         let user_id = &session.user_info.kivra_user_id;
         let details = self
             .client
@@ -122,5 +122,14 @@ impl Client for KivraClient {
             .error_for_status()?
             .json()?;
         Ok(details)
+    }
+
+    fn download_attachment(
+        &self,
+        _session: &Session,
+        _item_key: &String,
+        _attachment_key: &String,
+    ) -> Result<Vec<u8>, Error> {
+        Err(Error::AppError("Not implemented".to_string()))
     }
 }

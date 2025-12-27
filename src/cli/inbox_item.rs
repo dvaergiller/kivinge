@@ -1,8 +1,8 @@
 use chrono::{Local, TimeZone};
 
-use crate::kivra::model::ItemDetails;
+use crate::{error::Error, kivra::model::ItemDetails};
 
-pub fn print(details: ItemDetails) {
+pub fn print(details: ItemDetails) -> Result<(), Error> {
     let local_datetime = Local
         .from_utc_datetime(&details.created_at.naive_utc())
         .format("%Y-%m-%d %H:%M")
@@ -11,8 +11,11 @@ pub fn print(details: ItemDetails) {
     println!("Sender:   {}", details.sender_name);
     println!("Subject:  {}", details.subject);
     println!("Created:  {}", local_datetime);
+
     println!("\nAttachments:");
-    for (part, i) in details.parts.iter().zip(1..) {
-        println!("  {}: {}", i, part.name);
+    for i in 0..(details.parts.len()) {
+        println!("  {}: {}", i + 1, details.attachment_name(i)?);
     }
+
+    Ok(())
 }

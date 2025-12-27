@@ -1,3 +1,5 @@
+use std::{fs::File, io::Write, path::Path};
+
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{
     self,
@@ -27,12 +29,26 @@ enum Command {
         #[arg(value_enum)]
         shell: CompletionsShell,
     },
+
     #[command(about = "Log in to Kivra")]
     Login,
+
     #[command(about = "List all items in the inbox")]
     List,
+
     #[command(about = "View inbox item")]
     View { item_id: u32 },
+
+    #[command(about = "Download attachment")]
+    Download {
+        item_id: u32,
+
+        attachment_num: u32,
+
+        #[arg(default_value = ".")]
+        download_dir: String,
+    },
+
     #[command(about = "Log out from Kivra")]
     Logout,
 }
@@ -101,8 +117,35 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
                 .ok_or(Error::UserError(format!(
                     "Inbox item {item_id} does not exist"
                 )))?;
-            let details = client.get_item_details(&session, entry.item.key)?;
-            cli::inbox_item::print(details);
+            let details = client.get_item_details(&session, &entry.item.key)?;
+            cli::inbox_item::print(details)?;
+            Ok(())
+        }
+
+        Command::Download {
+            item_id,
+            attachment_num,
+            download_dir
+        } => {
+            let session = load_session_or_login(&client)?;
+            let inbox = client.get_inbox_listing(&session)?;
+            let entry = inbox
+                .into_iter()
+                .find(|i| i.id == item_id)
+                .ok_or(Error::UserError(format!(
+                    "Inbox item {item_id} does not exist"
+                )))?;
+            let details = client.get_item_details(&session, &entry.item.key)?;
+            let attachment = details
+                .parts
+                .get(attachment_num as usize)
+                .ok_or(Error::UserError(format!(
+                    "Inbox item {item_id} has no attachment number {attachment_num}"
+                )))?;
+            let file = client.download_attachment(&session, &entry.item.key, &attachment.key)?;
+            let filename = details.attachment_name(attachment_num as usize)?;
+            let full_path = Path::new(&download_dir).join(filename);
+            File::create_new(full_path)?.write_all(file.as_slice())?;
             Ok(())
         }
 
