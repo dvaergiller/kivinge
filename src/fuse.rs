@@ -195,7 +195,7 @@ impl<'a, C: Client> KivraFS<'a, C> {
                 .map_err(|err| Error::InternalError(err.to_string()))?;
             let by_name = inbox
                 .iter()
-                .map(|entry| (entry.item.name(), entry.clone()))
+                .map(|entry| (entry.to_string(), entry.clone()))
                 .collect();
             let by_id =
                 inbox.iter().map(|entry| (entry.id, entry.clone())).collect();
@@ -276,7 +276,7 @@ impl<'a, C: Client> KivraFS<'a, C> {
                 .by_id
                 .iter()
                 .map(|(&entry_id, entry)| {
-                    (entry.item.name(), Inode::InboxEntry { entry_id })
+                    (entry.to_string(), Inode::InboxEntry { entry_id })
                 })
                 .collect()),
             Inode::InboxEntry { entry_id } => {
