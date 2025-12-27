@@ -161,7 +161,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
         }
 
         Command::Mount { mountpoint } => {
-            fuse::mount(&mut client, mountpoint.as_path())
+            Ok(fuse::mount(&mut client, mountpoint.as_path())?)
         }
     }
 }

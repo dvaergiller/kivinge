@@ -11,21 +11,6 @@ pub enum Error {
     #[error("TUI error: {0}")]
     TuiError(#[from] super::tui::Error),
 
-    // #[error("JSON encode/decode failed - {0}")]
-    // JsonError(#[from] serde_json::Error),
-
-    // #[error("base64 decode failed - {0}")]
-    // Base64Error(#[from] base64::DecodeError),
-
-    // #[error("UTF-8 decode error")]
-    // FromUtf8Error(#[from] string::FromUtf8Error),
-
-    // #[error("Random data generation failed - {0}")]
-    // RandError(#[from] rand::Error),
-
-    // #[error("QR code generation failed - {0}")]
-    // QRError(#[from] super::tui::qr::Error),
-
     #[error("IO error encountered - {0}")]
     IOError(#[from] std::io::Error),
 
