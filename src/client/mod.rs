@@ -14,7 +14,10 @@ use session::Session;
 pub trait Client {
     fn get_config(&self) -> Result<Config, Error>;
 
-    fn start_auth(&self, config: &Config) -> Result<(CodeVerifier, AuthResponse), Error>;
+    fn start_auth(
+        &self,
+        config: &Config,
+    ) -> Result<(CodeVerifier, AuthResponse), Error>;
 
     fn check_auth(&self, poll_url: &str) -> Result<AuthStatus, Error>;
 
@@ -29,9 +32,16 @@ pub trait Client {
 
     fn revoke_auth_token(&self, session: &Session) -> Result<(), Error>;
 
-    fn get_inbox_listing(&self, session: &Session) -> Result<InboxListing, Error>;
+    fn get_inbox_listing(
+        &self,
+        session: &Session,
+    ) -> Result<InboxListing, Error>;
 
-    fn get_item_details(&self, session: &Session, item_key: &str) -> Result<ItemDetails, Error>;
+    fn get_item_details(
+        &self,
+        session: &Session,
+        item_key: &str,
+    ) -> Result<ItemDetails, Error>;
 
     fn download_attachment(
         &self,
@@ -46,7 +56,10 @@ impl Client for Box<dyn Client> {
         (**self).get_config()
     }
 
-    fn start_auth(&self, config: &Config) -> Result<(CodeVerifier, AuthResponse), Error> {
+    fn start_auth(
+        &self,
+        config: &Config,
+    ) -> Result<(CodeVerifier, AuthResponse), Error> {
         (**self).start_auth(config)
     }
 
@@ -71,11 +84,18 @@ impl Client for Box<dyn Client> {
         (**self).revoke_auth_token(session)
     }
 
-    fn get_inbox_listing(&self, session: &Session) -> Result<InboxListing, Error> {
+    fn get_inbox_listing(
+        &self,
+        session: &Session,
+    ) -> Result<InboxListing, Error> {
         (**self).get_inbox_listing(session)
     }
 
-    fn get_item_details(&self, session: &Session, item_key: &str) -> Result<ItemDetails, Error> {
+    fn get_item_details(
+        &self,
+        session: &Session,
+        item_key: &str,
+    ) -> Result<ItemDetails, Error> {
         (**self).get_item_details(session, item_key)
     }
 

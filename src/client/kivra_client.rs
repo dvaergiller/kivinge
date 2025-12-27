@@ -23,7 +23,10 @@ impl Client for KivraClient {
             .json()?)
     }
 
-    fn start_auth(&self, config: &Config) -> Result<(CodeVerifier, AuthResponse), Error> {
+    fn start_auth(
+        &self,
+        config: &Config,
+    ) -> Result<(CodeVerifier, AuthResponse), Error> {
         let verifier = pkce::code_verifier(48);
         let challenge = pkce::code_challenge(&verifier);
 
@@ -99,7 +102,10 @@ impl Client for KivraClient {
         Ok(())
     }
 
-    fn get_inbox_listing(&self, session: &Session) -> Result<InboxListing, Error> {
+    fn get_inbox_listing(
+        &self,
+        session: &Session,
+    ) -> Result<InboxListing, Error> {
         let user_id = &session.user_info.kivra_user_id;
         let listing = self
             .client
@@ -112,7 +118,11 @@ impl Client for KivraClient {
         Ok(InboxListing::from_content_specs(listing))
     }
 
-    fn get_item_details(&self, session: &Session, item_key: &str) -> Result<ItemDetails, Error> {
+    fn get_item_details(
+        &self,
+        session: &Session,
+        item_key: &str,
+    ) -> Result<ItemDetails, Error> {
         let user_id = &session.user_info.kivra_user_id;
         let details = self
             .client

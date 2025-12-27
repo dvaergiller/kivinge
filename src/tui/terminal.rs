@@ -27,7 +27,8 @@ impl DerefMut for LoadedTerminal {
 
 impl Drop for LoadedTerminal {
     fn drop(&mut self) {
-        terminal::disable_raw_mode().expect("IO Error disabling terminal raw mode");
+        terminal::disable_raw_mode()
+            .expect("IO Error disabling terminal raw mode");
         io::stdout()
             .execute(terminal::LeaveAlternateScreen)
             .expect("IO Error leaving alternate screen");

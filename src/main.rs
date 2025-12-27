@@ -81,7 +81,12 @@ fn main() {
 
 fn generate_completions<G: Generator>(gen: G) {
     let mut command = CliArgs::command();
-    clap_complete::generate(gen, &mut command, "kivinge", &mut std::io::stdout());
+    clap_complete::generate(
+        gen,
+        &mut command,
+        "kivinge",
+        &mut std::io::stdout(),
+    );
 }
 
 fn run(cli_args: CliArgs) -> Result<(), Error> {
@@ -95,7 +100,9 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
         Command::Completions { shell } => {
             match shell {
                 CompletionsShell::Bash => generate_completions(Bash),
-                CompletionsShell::PowerShell => generate_completions(PowerShell),
+                CompletionsShell::PowerShell => {
+                    generate_completions(PowerShell)
+                }
                 CompletionsShell::Zsh => generate_completions(Zsh),
             }
             Ok(())
@@ -119,27 +126,27 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             Ok(())
         }
 
-        Command::Download {
-            item_id,
-            attachment_num,
-            download_dir,
-        } => {
-            let full_path = download_attachment(&client, item_id, attachment_num, download_dir)?;
+        Command::Download { item_id, attachment_num, download_dir } => {
+            let full_path = download_attachment(
+                &client,
+                item_id,
+                attachment_num,
+                download_dir,
+            )?;
             Ok(println!("{}", full_path.to_string_lossy()))
         }
 
-        Command::Open {
-            item_id,
-            attachment_num,
-        } => {
+        Command::Open { item_id, attachment_num } => {
             let tmp_dir = std::env::temp_dir();
-            let full_path = download_attachment(&client, item_id, attachment_num, tmp_dir)?;
+            let full_path =
+                download_attachment(&client, item_id, attachment_num, tmp_dir)?;
             opener::open(full_path)?;
             Ok(())
         }
 
         Command::Logout => {
-            let session = session::try_load()?.ok_or(Error::UserError("No session found"))?;
+            let session = session::try_load()?
+                .ok_or(Error::UserError("No session found"))?;
             client.revoke_auth_token(&session)?;
             session::delete_saved()
         }
@@ -154,7 +161,9 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
     }
 }
 
-fn load_session_or_login(client: &impl Client) -> Result<session::Session, Error> {
+fn load_session_or_login(
+    client: &impl Client,
+) -> Result<session::Session, Error> {
     let loaded = session::try_load()?;
     if let Some(session) = loaded {
         return Ok(session);
@@ -163,7 +172,10 @@ fn load_session_or_login(client: &impl Client) -> Result<session::Session, Error
     let mut terminal = tui::terminal::load()?;
     match tui::login::show(&mut terminal, client)? {
         Some(auth_response) => {
-            let session = session::make(auth_response.access_token, auth_response.id_token)?;
+            let session = session::make(
+                auth_response.access_token,
+                auth_response.id_token,
+            )?;
             session::save(&session)?;
             Ok(session)
         }
@@ -171,7 +183,10 @@ fn load_session_or_login(client: &impl Client) -> Result<session::Session, Error
     }
 }
 
-fn get_entry_by_id(inbox: InboxListing, item_id: u32) -> Result<InboxEntry, Error> {
+fn get_entry_by_id(
+    inbox: InboxListing,
+    item_id: u32,
+) -> Result<InboxEntry, Error> {
     inbox
         .into_iter()
         .find(|i| i.id == item_id)
@@ -196,7 +211,9 @@ fn get_attachment_body(
         (None, None) => Err(Error::AppError(
             "Attachment has no attachment key nor inline body",
         )),
-        (Some(key), _) => client.download_attachment(session, &entry.item.key, key),
+        (Some(key), _) => {
+            client.download_attachment(session, &entry.item.key, key)
+        }
         (_, Some(body)) => Ok(Bytes::copy_from_slice(body.as_bytes())),
     }
 }

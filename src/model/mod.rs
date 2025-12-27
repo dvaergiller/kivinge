@@ -20,7 +20,9 @@ pub struct Config {
 pub struct Date(pub chrono::NaiveDate);
 
 impl<'a> Deserialize<'a> for Date {
-    fn deserialize<Des: serde::Deserializer<'a>>(d: Des) -> Result<Date, Des::Error> {
+    fn deserialize<Des: serde::Deserializer<'a>>(
+        d: Des,
+    ) -> Result<Date, Des::Error> {
         let mut date_string = String::deserialize(d)?.clone();
         let _removed = date_string.split_off(10);
         let date = NaiveDate::parse_from_str(&date_string, "%Y-%m-%d")

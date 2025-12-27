@@ -1,6 +1,8 @@
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Modifier, Style, Stylize};
-use ratatui::widgets::{Block, Borders, List, ListDirection, ListState, Paragraph};
+use ratatui::widgets::{
+    Block, Borders, List, ListDirection, ListState, Paragraph,
+};
 use ratatui::{symbols, Frame};
 use std::fmt::Display;
 
@@ -67,7 +69,10 @@ pub fn render(
 
         let top_layout = Layout::default()
             .direction(ratatui::layout::Direction::Horizontal)
-            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints(vec![
+                Constraint::Percentage(50),
+                Constraint::Percentage(50),
+            ])
             .split(main_layout[0]);
 
         let sender_block = Block::new()
@@ -121,7 +126,11 @@ pub fn render(
             .direction(ListDirection::TopToBottom)
             .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
             .highlight_symbol("> ");
-        frame.render_stateful_widget(attachments_widget, main_layout[2], list_state);
+        frame.render_stateful_widget(
+            attachments_widget,
+            main_layout[2],
+            list_state,
+        );
     };
     terminal.draw(draw)?;
     Ok(())

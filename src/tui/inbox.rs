@@ -50,10 +50,11 @@ pub fn show(
             KeyCommand::Select => match widget_state.selected() {
                 None => (),
                 Some(selected) => {
-                    let entry = inbox
-                        .get(selected)
-                        .ok_or(Error::AppError("Selected item out of bounds"))?;
-                    let details = client.get_item_details(session, &entry.item.key)?;
+                    let entry = inbox.get(selected).ok_or(Error::AppError(
+                        "Selected item out of bounds",
+                    ))?;
+                    let details =
+                        client.get_item_details(session, &entry.item.key)?;
                     content::show(terminal, &entry.item, &details)?;
                 }
             },
@@ -77,11 +78,8 @@ pub fn render(
 
 fn inbox_widget(inbox: &InboxListing) -> Table<'static> {
     let rows = inbox.iter().map(inbox_row);
-    let max_id_len = inbox
-        .iter()
-        .map(|i| i.id.to_string().len())
-        .max()
-        .unwrap_or_default();
+    let max_id_len =
+        inbox.iter().map(|i| i.id.to_string().len()).max().unwrap_or_default();
     let widths = [
         Constraint::Length(max_id_len as u16),
         Constraint::Max(20),
@@ -96,7 +94,8 @@ fn inbox_widget(inbox: &InboxListing) -> Table<'static> {
 }
 
 fn inbox_row(entry: &InboxEntry) -> Row<'static> {
-    let local_datetime = Local.from_utc_datetime(&entry.item.created_at.naive_utc());
+    let local_datetime =
+        Local.from_utc_datetime(&entry.item.created_at.naive_utc());
     let cells = [
         entry.id.to_string(),
         entry.item.sender_name.clone(),

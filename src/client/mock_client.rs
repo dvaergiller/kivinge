@@ -13,26 +13,29 @@ pub struct MockClient {
 
 impl Client for MockClient {
     fn get_config(&self) -> Result<Config, Error> {
-        let config = serde_json::from_str(include_str!("test_data/config.json"))?;
+        let input = include_str!("test_data/config.json");
+        let config = serde_json::from_str(input)?;
         Ok(config)
     }
 
-    fn start_auth(&self, _config: &Config) -> Result<(CodeVerifier, AuthResponse), Error> {
+    fn start_auth(
+        &self,
+        _config: &Config,
+    ) -> Result<(CodeVerifier, AuthResponse), Error> {
         let verifier = pkce::code_verifier(48);
-        let response = serde_json::from_str(include_str!("test_data/auth_response.json"))?;
+        let input = include_str!("test_data/auth_response.json");
+        let response = serde_json::from_str(input)?;
         Ok((verifier, response))
     }
 
     fn check_auth(&self, _poll_url: &str) -> Result<AuthStatus, Error> {
         let mut updates = self.check_auth_calls.borrow_mut();
         (*updates) += 1;
-        let status = serde_json::from_str(include_str!("test_data/auth_status.json"))?;
+        let input = include_str!("test_data/auth_status.json");
+        let status = serde_json::from_str(input)?;
 
         if (*updates) > 3 {
-            Ok(AuthStatus {
-                ssn: Some("195208152712".to_string()),
-                ..status
-            })
+            Ok(AuthStatus { ssn: Some("195208152712".to_string()), ..status })
         } else {
             Ok(status)
         }
@@ -48,7 +51,8 @@ impl Client for MockClient {
         _auth_code: String,
         _verifier: CodeVerifier,
     ) -> Result<AuthTokenResponse, Error> {
-        let response = serde_json::from_str(include_str!("test_data/auth_token_response.json"))?;
+        let input = include_str!("test_data/auth_token_response.json");
+        let response = serde_json::from_str(input)?;
         Ok(response)
     }
 
@@ -56,13 +60,22 @@ impl Client for MockClient {
         Ok(())
     }
 
-    fn get_inbox_listing(&self, _session: &Session) -> Result<InboxListing, Error> {
-        let listing = serde_json::from_str(include_str!("test_data/inbox.json"))?;
+    fn get_inbox_listing(
+        &self,
+        _session: &Session,
+    ) -> Result<InboxListing, Error> {
+        let input = include_str!("test_data/inbox.json");
+        let listing = serde_json::from_str(input)?;
         Ok(InboxListing::from_content_specs(listing))
     }
 
-    fn get_item_details(&self, _session: &Session, _item_key: &str) -> Result<ItemDetails, Error> {
-        let details = serde_json::from_str(include_str!("test_data/details.json"))?;
+    fn get_item_details(
+        &self,
+        _session: &Session,
+        _item_key: &str,
+    ) -> Result<ItemDetails, Error> {
+        let input = include_str!("test_data/details.json");
+        let details = serde_json::from_str(input)?;
         Ok(details)
     }
 

@@ -84,11 +84,7 @@ pub fn delete_saved() -> Result<(), Error> {
 
 pub fn make(access_token: String, id_token: String) -> Result<Session, Error> {
     let user_info = extract_user_info(&id_token)?;
-    Ok(Session {
-        user_info,
-        access_token,
-        id_token,
-    })
+    Ok(Session { user_info, access_token, id_token })
 }
 
 fn extract_user_info(id_token: &str) -> Result<UserInfo, Error> {

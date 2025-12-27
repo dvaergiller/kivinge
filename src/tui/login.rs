@@ -41,8 +41,10 @@ pub fn show(
         match check.ssn {
             None => {
                 state.qr_code = check.qr_code;
-                state.next_poll_url = check.next_poll_url.unwrap_or(state.next_poll_url);
-                state.retry_after = check.retry_after.unwrap_or(state.retry_after);
+                state.next_poll_url =
+                    check.next_poll_url.unwrap_or(state.next_poll_url);
+                state.retry_after =
+                    check.retry_after.unwrap_or(state.retry_after);
             }
             Some(_) => {
                 return client
@@ -53,7 +55,10 @@ pub fn show(
     }
 }
 
-pub fn render(terminal: &mut LoadedTerminal, qr_code: &String) -> Result<(), Error> {
+pub fn render(
+    terminal: &mut LoadedTerminal,
+    qr_code: &String,
+) -> Result<(), Error> {
     let qr = qr::encode(qr_code)?;
 
     let title = "Authenticate with BankID";
