@@ -1,10 +1,9 @@
 use crossterm::event::{poll, read, Event, KeyCode};
+use ratatui::{prelude, widgets};
 use std::time::Duration;
 
-use super::qr;
-use crate::error::Error;
-use crate::kivra::{client, model};
-use crate::terminal::{self, prelude, widgets, LoadedTerminal};
+use super::{qr, terminal::LoadedTerminal};
+use crate::{client::Client, error::Error, model::auth::AuthTokenResponse};
 
 struct State {
     qr_code: String,
@@ -13,9 +12,9 @@ struct State {
 }
 
 pub fn show(
-    terminal: &mut terminal::LoadedTerminal,
-    client: &impl client::Client,
-) -> Result<Option<model::AuthTokenResponse>, Error> {
+    terminal: &mut LoadedTerminal,
+    client: &impl Client,
+) -> Result<Option<AuthTokenResponse>, Error> {
     let config = client.get_config()?;
     let (verifier, auth_resp) = client.start_auth(&config)?;
 

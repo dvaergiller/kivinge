@@ -2,7 +2,7 @@ use chrono::{Local, TimeZone};
 use tabled::builder::Builder;
 use tabled::settings::Style;
 
-use crate::kivra::model::InboxListing;
+use crate::model::content::InboxListing;
 
 pub fn format(inbox: InboxListing) -> String {
     let mut builder = Builder::default();

@@ -1,5 +1,5 @@
 pub mod cli;
+pub mod client;
 pub mod error;
-pub mod kivra;
-pub mod terminal;
+pub mod model;
 pub mod tui;

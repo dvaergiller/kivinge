@@ -2,10 +2,9 @@ use bytes::Bytes;
 use std::cell::RefCell;
 use std::include_str;
 
-use super::Client;
+use super::{Client, Session};
 use crate::error::Error;
-use crate::kivra::model::*;
-use crate::kivra::session::Session;
+use crate::model::{auth::*, content::*, Config};
 
 #[derive(Default)]
 pub struct MockClient {

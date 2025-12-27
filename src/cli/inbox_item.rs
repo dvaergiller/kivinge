@@ -1,6 +1,6 @@
 use chrono::{Local, TimeZone};
 
-use crate::{error::Error, kivra::model::ItemDetails};
+use crate::{error::Error, model::content::ItemDetails};
 
 pub fn format(details: ItemDetails) -> Result<String, Error> {
     let local_datetime = Local

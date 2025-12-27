@@ -6,13 +6,16 @@ use ratatui::{
     Frame,
 };
 
-use crate::{
-    error::Error,
-    kivra::{client::Client, model::{InboxEntry, InboxListing}, session::Session},
-    terminal::LoadedTerminal, tui::content,
+use super::{
+    content,
+    keymap::{read_key, KeyCommand},
+    terminal::LoadedTerminal,
 };
-
-use super::keymap::{read_key, KeyCommand};
+use crate::{
+    client::{session::Session, Client},
+    error::Error,
+    model::content::{InboxEntry, InboxListing},
+};
 
 pub fn show(
     client: &impl Client,
@@ -38,23 +41,22 @@ pub fn show(
 
             KeyCommand::Down => {
                 let select = match widget_state.selected().unwrap_or(0) {
-                    n if n >= inbox.len() => n,
+                    n if n >= inbox.len() - 1 => n,
                     n => n + 1,
                 };
                 widget_state.select(Some(select));
             }
 
-            KeyCommand::Select => {
-                match widget_state.selected() {
-                    None => (),
-                    Some(selected) => {
-                        let entry = inbox.get(selected)
-                            .ok_or(Error::AppError("Selected item out of bounds".to_string()))?;
-                        let details = client.get_item_details(session, &entry.item.key)?;
-                        content::show(terminal, &entry.item, &details)?;
-                    }
+            KeyCommand::Select => match widget_state.selected() {
+                None => (),
+                Some(selected) => {
+                    let entry = inbox
+                        .get(selected)
+                        .ok_or(Error::AppError("Selected item out of bounds".to_string()))?;
+                    let details = client.get_item_details(session, &entry.item.key)?;
+                    content::show(terminal, &entry.item, &details)?;
                 }
-            }
+            },
             _ => (),
         }
     }

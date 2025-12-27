@@ -1,14 +1,15 @@
 use bytes::Bytes;
 
-use super::model::*;
-use super::session::Session;
+use super::model::{auth::*, content::*, Config};
 use crate::error::Error;
 
 mod kivra_client;
 mod mock_client;
+pub mod session;
 
 pub use kivra_client::KivraClient;
 pub use mock_client::MockClient;
+use session::Session;
 
 pub trait Client {
     fn get_config(&self) -> Result<Config, Error>;

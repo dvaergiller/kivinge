@@ -1,13 +1,13 @@
 use ratatui::layout::{Constraint, Layout};
-use ratatui::style::{Style, Stylize};
-use ratatui::widgets::{Block, Borders, List, ListDirection, Paragraph};
+use ratatui::style::{Modifier, Style, Stylize};
+use ratatui::widgets::{Block, Borders, List, ListDirection, ListState, Paragraph};
 use ratatui::{symbols, Frame};
 use std::fmt::Display;
 
 use crate::{
     error::Error,
-    kivra::model::{InboxItem, ItemDetails},
-    terminal::LoadedTerminal,
+    model::content::{InboxItem, ItemDetails},
+    tui::terminal::LoadedTerminal,
 };
 
 use super::keymap::{read_key, KeyCommand};
@@ -17,11 +17,27 @@ pub fn show(
     item: &InboxItem,
     details: &ItemDetails,
 ) -> Result<(), Error> {
+    let mut list_state = ListState::default().with_selected(Some(0));
     loop {
-        render(terminal, item, details)?;
+        render(terminal, item, details, &mut list_state)?;
         match read_key()? {
-            KeyCommand::Quit
-                | KeyCommand::Back => {
+            KeyCommand::Up => {
+                let select = match list_state.selected().unwrap_or(0) {
+                    0 => 0,
+                    n => n - 1,
+                };
+                list_state.select(Some(select));
+            }
+
+            KeyCommand::Down => {
+                let select = match list_state.selected().unwrap_or(0) {
+                    n if n >= details.parts.len() - 1 => n,
+                    n => n + 1,
+                };
+                list_state.select(Some(select));
+            }
+
+            KeyCommand::Quit | KeyCommand::Back => {
                 return Ok(());
             }
             _ => (),
@@ -37,6 +53,7 @@ pub fn render(
     terminal: &mut LoadedTerminal,
     item: &InboxItem,
     details: &ItemDetails,
+    list_state: &mut ListState,
 ) -> Result<(), Error> {
     let draw = |frame: &mut Frame| {
         let main_layout = Layout::default()
@@ -99,10 +116,12 @@ pub fn render(
         let attachments: Vec<String> = (0..(details.parts.len()))
             .map(|i| details.attachment_name(i).unwrap())
             .collect();
-        let subject_widget = List::new(attachments)
+        let attachments_widget = List::new(attachments)
             .block(attachments_block)
-            .direction(ListDirection::TopToBottom);
-        frame.render_widget(subject_widget, main_layout[2]);
+            .direction(ListDirection::TopToBottom)
+            .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
+            .highlight_symbol("> ");
+        frame.render_stateful_widget(attachments_widget, main_layout[2], list_state);
     };
     terminal.draw(draw)?;
     Ok(())

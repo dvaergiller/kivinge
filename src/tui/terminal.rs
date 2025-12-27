@@ -1,13 +1,13 @@
-use super::error::Error;
-use crossterm::execute;
-use crossterm::terminal;
-use crossterm::ExecutableCommand;
+use crossterm::{execute, terminal, ExecutableCommand};
 use ratatui::prelude::*;
-pub use ratatui::{prelude, widgets};
-use std::io;
-use std::io::stdout;
-use std::ops::{Deref, DerefMut};
-use std::panic;
+use std::{
+    io,
+    io::stdout,
+    ops::{Deref, DerefMut},
+    panic,
+};
+
+use crate::error::Error;
 
 #[derive(Debug)]
 pub struct LoadedTerminal(Terminal<CrosstermBackend<io::Stdout>>);

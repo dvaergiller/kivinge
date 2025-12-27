@@ -1,9 +1,9 @@
 use bytes::Bytes;
 
 use super::Client;
+use crate::client::Session;
 use crate::error::Error;
-use crate::kivra::model::*;
-use crate::kivra::session::Session;
+use crate::model::{auth::*, content::*, Config};
 
 const API_URL: &str = "https://app.api.kivra.com";
 const ACCOUNTS_URL: &str = "https://accounts.kivra.com";

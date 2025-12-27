@@ -1,96 +1,15 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::{collections::BTreeMap, ops::Deref};
 
+use super::Date;
 use crate::error::Error;
-
-pub type UserId = String;
-
-#[derive(Deserialize, Debug)]
-pub struct Config {
-    pub company_onboard_complete_oauth_client_id: String,
-    pub oauth_endpoint_url: String,
-    pub oauth_default_client_id: String,
-    pub oauth_default_redirect_uri: String,
-    pub oauth_grant_type: String,
-    pub oauth_response_type: String,
-}
-
-pub type CodeVerifier = Vec<u8>;
-pub type AuthCode = String;
-
-#[derive(Serialize)]
-pub struct AuthRequest {
-    pub response_type: String,
-    pub code_challenge: String,
-    pub code_challenge_method: String,
-    pub scope: String,
-    pub client_id: String,
-    pub redirect_uri: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct AuthResponse {
-    pub auto_start_token: String,
-    pub qr_data: Vec<String>,
-    pub qr_code: String,
-    pub code: AuthCode,
-    pub next_poll_url: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct AuthStatus {
-    pub status: String,
-    pub progress_status: String,
-    pub message_code: String,
-    pub qr_code: String,
-    pub ssn: Option<String>,
-    pub retry_after: Option<u32>,
-    pub next_poll_url: Option<String>,
-}
-
-#[derive(Serialize, Debug)]
-pub struct AuthTokenRequest {
-    pub client_id: String,
-    pub code: String,
-    pub code_verifier: String,
-    pub grant_type: String,
-    pub redirect_uri: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct AuthTokenResponse {
-    pub access_token: String,
-    pub expires_in: u32,
-    pub id_token: String,
-    pub scope: String,
-    pub token_type: String,
-}
-
-#[derive(Serialize, Debug)]
-pub struct RevokeRequest {
-    pub token: String,
-    pub token_type_hint: String,
-}
 
 pub type ContentKey = String;
 pub type SenderKey = String;
 pub type AgreementKey = String;
 pub type ContentLabels = BTreeMap<String, bool>;
-
-#[derive(Debug)]
-pub struct Date(pub chrono::NaiveDate);
-
-impl<'a> Deserialize<'a> for Date {
-    fn deserialize<Des: serde::Deserializer<'a>>(d: Des) -> Result<Date, Des::Error> {
-        let mut date_string = String::deserialize(d)?.clone();
-        let _removed = date_string.split_off(10);
-        let date = NaiveDate::parse_from_str(&date_string, "%Y-%m-%d")
-            .map_err(serde::de::Error::custom)?;
-        Ok(Date(date))
-    }
-}
 
 #[derive(Deserialize, Debug)]
 pub struct InboxItem {

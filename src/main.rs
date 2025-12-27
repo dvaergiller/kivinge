@@ -5,16 +5,18 @@ use clap_complete::{
     shells::{Bash, PowerShell, Zsh},
     Generator,
 };
-use kivinge::kivra::{
-    client::{self, Client},
-    model::{InboxEntry, InboxListing},
-    session::{self, Session},
-};
-use kivinge::{cli, error::Error, terminal, tui};
 use std::{
     fs::File,
     io::Write,
     path::{Path, PathBuf},
+};
+
+use kivinge::{
+    cli,
+    client::{self, session, Client},
+    error::Error,
+    model::content::{InboxEntry, InboxListing},
+    tui,
 };
 
 #[derive(Parser, Debug)]
@@ -146,20 +148,20 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
         Command::Tui => {
             let session = load_session_or_login(&client)?;
             let inbox = client.get_inbox_listing(&session)?;
-            let mut terminal = terminal::load()?;
+            let mut terminal = tui::terminal::load()?;
             tui::inbox::show(&client, &session, &mut terminal, inbox)?;
             Ok(())
         }
     }
 }
 
-fn load_session_or_login(client: &impl Client) -> Result<Session, Error> {
+fn load_session_or_login(client: &impl Client) -> Result<session::Session, Error> {
     let loaded = session::try_load()?;
     if let Some(session) = loaded {
         return Ok(session);
     }
 
-    let mut terminal = terminal::load()?;
+    let mut terminal = tui::terminal::load()?;
     match tui::login::show(&mut terminal, client)? {
         Some(auth_response) => {
             let session = session::make(auth_response.access_token, auth_response.id_token)?;
@@ -181,7 +183,7 @@ fn get_entry_by_id(inbox: InboxListing, item_id: u32) -> Result<InboxEntry, Erro
 
 fn get_attachment_body(
     client: &impl Client,
-    session: &Session,
+    session: &session::Session,
     item_id: u32,
     attachment_num: u32,
 ) -> Result<Bytes, Error> {
