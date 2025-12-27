@@ -8,7 +8,6 @@ opt-level = 'z'
 lto = true
 strip = true
 codegen-units = 1
-panic = "abort"
 
 [lib]
 name = "kivinge"
@@ -38,3 +37,4 @@ thiserror = "1.0.61"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 qrcode-braille = { path = "../qrcode-braille" }
+fork = "0.6.0"

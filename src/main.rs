@@ -4,6 +4,7 @@ use clap_complete::{
     shells::{Bash, PowerShell, Zsh},
     Generator,
 };
+use fork::Fork;
 use std::{fs::File, path::PathBuf};
 use tracing_subscriber::{
     fmt::{self, format::FmtSpan},
@@ -66,7 +67,11 @@ enum Command {
     Tui,
 
     #[command(about = "Mount inbox as FUSE filesystem")]
-    Mount { mountpoint: PathBuf },
+    Mount {
+        mountpoint: PathBuf,
+        #[arg(short = 'o', default_value = "")]
+        mount_opts: String,
+    },
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -77,18 +82,25 @@ enum CompletionsShell {
 }
 
 fn main() -> Result<(), Error> {
-    let logpath = dirs::state_dir().unwrap_or(".".into()).join("kivinge.log");
-    let logfile = File::options().append(true).create(true).open(logpath)?;
-    tracing_subscriber::registry()
-        // .with(fmt::layer().with_span_events(FmtSpan::ENTER))
-        .with(fmt::layer()
-              .with_writer(logfile)
-              .with_span_events(FmtSpan::ENTER)
-        )
-        .with(EnvFilter::from_env("LOGLEVEL"))
-        .init();
-
     let cli_args = CliArgs::parse();
+    match maybe_fork(cli_args) {
+        Ok(None) =>
+            Ok(()),
+        Ok(Some(output)) =>
+            Ok(println!("{output}")),
+        Err(Error::ClientError(client::Error::LoginAborted)) =>
+            Ok(println!("Login aborted")),
+        Err(err) =>
+            Err(err),
+    }
+}
+
+fn maybe_fork(cli_args: CliArgs) -> Result<Option<String>, Error> {
+    if let Command::Mount { .. } = cli_args.command {
+        if let Fork::Parent(_) = fork::daemon(true, false)? {
+            return Ok(None);
+        }
+    }
     run(cli_args)
 }
 
@@ -102,7 +114,17 @@ fn generate_completions<G: Generator>(gen: G) {
     );
 }
 
-fn run(cli_args: CliArgs) -> Result<(), Error> {
+fn run(cli_args: CliArgs) -> Result<Option<String>, Error> {
+    let logpath = dirs::state_dir().unwrap_or(".".into()).join("kivinge.log");
+    let logfile = File::options().append(true).create(true).open(logpath)?;
+    tracing_subscriber::registry()
+        .with(fmt::layer()
+              .with_writer(logfile.try_clone()?)
+              .with_span_events(FmtSpan::ENTER)
+        )
+        .with(EnvFilter::from_env("LOGLEVEL"))
+        .init();
+
     let mut client: Box<dyn Client> = if cli_args.mock {
         Box::new(client::MockClient::default())
     } else {
@@ -118,26 +140,24 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
                 }
                 CompletionsShell::Zsh => generate_completions(Zsh),
             }
-            Ok(())
+            Ok(None)
         }
 
         Command::Login => {
             client.get_session_or_login()?;
-            Ok(())
+            Ok(Some("Login Successful".to_string()))
         }
 
         Command::List => {
             let inbox = client.get_inbox_listing()?;
-            println!("{}", cli::inbox::format(inbox));
-            Ok(())
+            Ok(Some(cli::inbox::format(inbox)))
         }
 
         Command::View { item_id } => {
             let inbox = client.get_inbox_listing()?;
             let entry = get_entry_by_id(inbox, item_id)?;
             let details = client.get_item_details(&entry.item.key)?;
-            println!("{}", cli::inbox_item::format(details)?);
-            Ok(())
+            Ok(Some(cli::inbox_item::format(details)?))
         }
 
         Command::Download { item_id, attachment_num, download_dir } => {
@@ -149,29 +169,32 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
                 attachment_num,
                 download_dir,
             )?;
-            println!("{}", full_path.to_string_lossy());
-            Ok(())
+            Ok(Some(full_path.to_string_lossy().to_string()))
         }
 
         Command::Open { item_id, attachment_num } => {
             let inbox = client.get_inbox_listing()?;
             let entry = get_entry_by_id(inbox, item_id)?;
-            open_attachment(&mut client, &entry.item, attachment_num)
+            open_attachment(&mut client, &entry.item, attachment_num)?;
+            Ok(None)
         }
 
         Command::Logout => {
             client.revoke_auth_token()?;
-            Ok(session::delete_saved()?)
+            session::delete_saved()?;
+            Ok(Some("Session token deleted".to_string()))
         }
 
         Command::Tui => {
             let mut terminal = tui::terminal::load()?;
             show_inbox_tui(&mut terminal, &mut client)?;
-            Ok(())
+            Ok(None)
         }
 
-        Command::Mount { mountpoint } => {
-            Ok(fuse::mount(&mut client, mountpoint.as_path())?)
+        Command::Mount { mountpoint, .. } => {
+            client.get_session_or_login()?;
+            fuse::mount(client, mountpoint.as_path())?;
+            Ok(None)
         }
     }
 }

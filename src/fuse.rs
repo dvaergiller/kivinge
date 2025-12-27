@@ -85,7 +85,7 @@ const INBOX_TTL: Duration = Duration::from_secs(60);
 const DETAILS_TTL: Duration = Duration::from_mins(60);
 const FILESYSTEM_TTL: Duration = Duration::from_secs(60);
 
-pub fn mount(client: &mut impl Client, mountpoint: &Path) -> Result<(), Error> {
+pub fn mount(client: impl Client, mountpoint: &Path) -> Result<(), Error> {
     let mut filesystem = KivraFS {
         client,
         inbox_cache: TimedSizedCache::with_size_and_lifespan(1, INBOX_TTL),
@@ -98,8 +98,6 @@ pub fn mount(client: &mut impl Client, mountpoint: &Path) -> Result<(), Error> {
         MountOption::DefaultPermissions,
         MountOption::RO,
         MountOption::NoAtime,
-        MountOption::AllowRoot,
-        MountOption::AutoUnmount,
     ];
     mount2(filesystem, mountpoint, &mount_options)?;
     Ok(())
@@ -179,14 +177,14 @@ struct InboxIndex {
     pub by_id: HashMap<u32, InboxEntry>,
 }
 
-struct KivraFS<'a, C: Client> {
-    client: &'a mut C,
+struct KivraFS<C: Client> {
+    client: C,
     inbox_cache: TimedSizedCache<(), InboxIndex>,
     details_cache: TimedCache<u32, ItemDetails>,
     attachment_cache: SizedCache<(u32, u32), Bytes>,
 }
 
-impl<'a, C: Client> KivraFS<'a, C> {
+impl<C: Client> KivraFS<C> {
     fn inbox_index(&mut self) -> Result<&InboxIndex, Error> {
         let listing = self.inbox_cache.cache_try_get_or_set_with((), || {
             let inbox = self
@@ -325,7 +323,7 @@ impl<'a, C: Client> KivraFS<'a, C> {
     }
 }
 
-impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
+impl<C: Client> Filesystem for KivraFS<C> {
     fn lookup(
         &mut self,
         _req: &Request<'_>,
