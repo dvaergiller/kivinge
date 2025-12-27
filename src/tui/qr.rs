@@ -1,6 +1,5 @@
 use qrcode::{EcLevel, QrCode, Version};
 use qrcode_braille::render::BraillePixel;
-use tracing::info;
 
 use super::Error;
 

@@ -1,11 +1,10 @@
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     prelude,
-    style::{self, Color, Modifier},
-    widgets::{self, Paragraph}
+    style::Color,
+    widgets::Paragraph
 };
 use std::time::Duration;
-use tracing::info;
 
 const QR_BRANDING: &str = concat!(
 " ▄▄  ▄▄ \n",
@@ -16,10 +15,9 @@ const QR_BRANDING: &str = concat!(
 
 use super::{keymap::KeyEvent, qr, Command, Error, Event, TuiView};
 use crate::{
-    client::Client,
+    client::{self, Client},
     model::{
-        auth::{AuthCode, AuthTokenResponse},
-        Config,
+        Config, auth::{AuthCode, AuthTokenResponse}
     },
 };
 
@@ -49,7 +47,7 @@ impl<'a, C: Client> LoginView<'a, C> {
         })
     }
 
-    fn check_auth(&mut self) -> Result<Option<AuthTokenResponse>, Error> {
+    fn check_auth(&mut self) -> Result<Option<AuthTokenResponse>, client::Error> {
         let check = self.client.check_auth(&self.next_poll_url)?;
         match check.ssn {
             None => {
