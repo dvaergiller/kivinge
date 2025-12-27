@@ -6,16 +6,9 @@ use crate::error::Error;
 use crate::kivra::model::*;
 use crate::kivra::session::Session;
 
+#[derive(Default)]
 pub struct MockClient {
     check_auth_calls: RefCell<u32>,
-}
-
-impl MockClient {
-    pub fn new() -> MockClient {
-        MockClient {
-            check_auth_calls: RefCell::new(0),
-        }
-    }
 }
 
 impl Client for MockClient {

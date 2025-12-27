@@ -59,9 +59,9 @@ fn generate_completions<G: Generator>(gen: G) {
 
 fn run(cli_args: CliArgs) -> Result<(), Error> {
     let client: Box<dyn Client> = if cli_args.mock {
-        Box::new(client::MockClient::new())
+        Box::new(client::MockClient::default())
     } else {
-        Box::new(client::KivraClient::new())
+        Box::new(client::KivraClient::default())
     };
 
     match cli_args.command {

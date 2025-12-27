@@ -6,22 +6,9 @@ use crate::kivra::session::Session;
 const API_URL: &str = "https://app.api.kivra.com";
 const ACCOUNTS_URL: &str = "https://accounts.kivra.com";
 
+#[derive(Default)]
 pub struct KivraClient {
     client: reqwest::blocking::Client,
-}
-
-impl KivraClient {
-    pub fn new() -> KivraClient {
-        KivraClient {
-            client: reqwest::blocking::Client::new(),
-        }
-    }
-}
-
-impl Default for KivraClient {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Client for KivraClient {
