@@ -33,20 +33,26 @@ trait Request {
 }
 
 impl Request for reqwest::blocking::RequestBuilder {
+    #[instrument(level = "DEBUG")]
     fn try_send(self) -> reqwest::Result<Response> {
         self.send()?.error_for_status()
     }
 }
 
-#[derive(Default)]
 pub struct KivraClient {
     client: reqwest::blocking::Client,
     session: Option<Session>,
 }
 
 impl KivraClient {
-    fn send(&self, request: RequestBuilder) -> reqwest::Result<Response> {
-        request.send()?.error_for_status()
+    pub fn new() -> Result<KivraClient, Error> {
+        let client = reqwest::blocking::Client::builder()
+            .use_native_tls()
+            .build()?;
+        Ok(KivraClient {
+            client,
+            session: None,
+        })
     }
 
     pub fn auth_request(
@@ -73,23 +79,24 @@ impl KivraClient {
         request: RequestBuilder,
     ) -> Result<Response, Error> {
         let session = self.session.as_ref().ok_or(Error::NoSession)?;
-        self.send(request.bearer_auth(&session.access_token)).map_err(|err| {
-            if err.status() == Some(reqwest::StatusCode::UNAUTHORIZED) {
-                Error::SessionExpired
-            } else {
-                err.into()
-            }
-        })
+        request
+            .bearer_auth(&session.access_token)
+            .try_send()
+            .map_err(|err| {
+                if err.status() == Some(reqwest::StatusCode::UNAUTHORIZED) {
+                    Error::SessionExpired
+                } else {
+                    err.into()
+                }
+            })
     }
 }
 
 impl Client for KivraClient {
-    #[instrument(skip(self))]
     fn get_config(&self) -> Result<Config, Error> {
-        Ok(get!(self, "{ACCOUNTS_URL}/config.json").send()?.json()?)
+        Ok(get!(self, "{ACCOUNTS_URL}/config.json").try_send()?.json()?)
     }
 
-    #[instrument(skip(self))]
     fn start_auth(
         &self,
         config: &Config,
@@ -106,24 +113,21 @@ impl Client for KivraClient {
             redirect_uri: config.oauth_default_redirect_uri.clone(),
         };
         let response = get!(self, "{API_URL}/v2/oauth2/authorize")
-            .json(&auth_request)
+            .query(&auth_request)
             .try_send()?
             .json()?;
         Ok((verifier, response))
     }
 
-    #[instrument(skip(self))]
     fn check_auth(&self, poll_url: &str) -> Result<AuthStatus, Error> {
         Ok(get!(self, "{API_URL}{poll_url}").try_send()?.json()?)
     }
 
-    #[instrument(skip(self))]
     fn abort_auth(&self, poll_url: &str) -> Result<(), Error> {
         delete!(self, "{API_URL}{poll_url}").try_send()?;
         Ok(())
     }
 
-    #[instrument(skip(self))]
     fn get_auth_token(
         &self,
         config: &Config,
@@ -145,7 +149,6 @@ impl Client for KivraClient {
             .json()?)
     }
 
-    #[instrument(skip(self))]
     fn revoke_auth_token(&mut self) -> Result<(), Error> {
         if let Some(session) = self.get_or_load_session()? {
             let body = RevokeRequest {
@@ -159,7 +162,6 @@ impl Client for KivraClient {
         Ok(())
     }
 
-    #[instrument(skip(self))]
     fn get_inbox_listing(&mut self) -> Result<InboxListing, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
@@ -169,28 +171,28 @@ impl Client for KivraClient {
         Ok(InboxListing::from_content_specs(listing))
     }
 
-    #[instrument(skip(self))]
     fn get_item_details(
         &mut self,
         item_key: &str,
     ) -> Result<ItemDetails, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let req = get!(self, "{API_URL}/v3/user/{user_id}/content/{item_key}");
-        Ok(self.auth_request(req)?.json()?)
+        let response = self.auth_request(
+            get!(self, "{API_URL}/v3/user/{user_id}/content/{item_key}")
+        )?;
+        Ok(response.json()?)
     }
 
-    #[instrument(skip(self))]
     fn mark_as_read(&mut self, item_key: &str) -> Result<(), Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let req =
+        self.auth_request(
             post!(self, "{API_URL}/v2/user/{user_id}/content/{item_key}/view")
-                .header("content-type", "application/json");
-        Ok(self.auth_request(req)?.json()?)
+                .header("content-type", "application/json")
+        )?;
+        Ok(())
     }
 
-    #[instrument(skip(self))]
     fn download_attachment(
         &mut self,
         item_key: &str,
@@ -205,7 +207,6 @@ impl Client for KivraClient {
         Ok(self.auth_request(req)?.bytes()?)
     }
 
-    #[instrument(skip(self))]
     fn get_session(&self) -> Option<Session> {
         self.session.clone()
     }
@@ -214,7 +215,6 @@ impl Client for KivraClient {
         self.session = Some(session);
     }
 
-    #[instrument(skip(self))]
     fn login(&mut self) -> Result<Session, Error> {
         let to_dyn_boxed = |error: tui::Error| -> Box<dyn std::error::Error> {
             Box::new(error)

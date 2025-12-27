@@ -4,7 +4,7 @@ use clap_complete::{
     shells::{Bash, PowerShell, Zsh},
     Generator,
 };
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 use tracing_subscriber::{
     fmt::{self, format::FmtSpan},
     prelude::*,
@@ -76,17 +76,20 @@ enum CompletionsShell {
     Zsh,
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
+    let logpath = dirs::state_dir().unwrap_or(".".into()).join("kivinge.log");
+    let logfile = File::options().append(true).create(true).open(logpath)?;
     tracing_subscriber::registry()
-        .with(fmt::layer().with_span_events(FmtSpan::ENTER))
+        // .with(fmt::layer().with_span_events(FmtSpan::ENTER))
+        .with(fmt::layer()
+              .with_writer(logfile)
+              .with_span_events(FmtSpan::ENTER)
+        )
         .with(EnvFilter::from_env("LOGLEVEL"))
         .init();
 
     let cli_args = CliArgs::parse();
-    match run(cli_args) {
-        Ok(()) => (),
-        Err(err) => println!("Error: {err}"),
-    }
+    run(cli_args)
 }
 
 fn generate_completions<G: Generator>(gen: G) {
@@ -103,7 +106,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
     let mut client: Box<dyn Client> = if cli_args.mock {
         Box::new(client::MockClient::default())
     } else {
-        Box::new(client::KivraClient::default())
+        Box::new(client::KivraClient::new()?)
     };
 
     match cli_args.command {
