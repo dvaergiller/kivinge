@@ -1,9 +1,3 @@
-use std::{
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
-
 use bytes::Bytes;
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{
@@ -17,6 +11,11 @@ use kivinge::kivra::{
     session::{self, Session},
 };
 use kivinge::{cli, error::Error, terminal, tui};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -58,6 +57,9 @@ enum Command {
 
     #[command(about = "Log out from Kivra")]
     Logout,
+
+    #[command(about = "Start interactive terminal UI")]
+    Tui,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -139,6 +141,14 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
                 session::try_load()?.ok_or(Error::UserError("No session found".to_string()))?;
             client.revoke_auth_token(&session)?;
             session::delete_saved()
+        }
+
+        Command::Tui => {
+            let session = load_session_or_login(&client)?;
+            let inbox = client.get_inbox_listing(&session)?;
+            let mut terminal = terminal::load()?;
+            tui::inbox::show(&client, &session, &mut terminal, inbox)?;
+            Ok(())
         }
     }
 }

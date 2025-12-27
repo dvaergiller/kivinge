@@ -1,10 +1,9 @@
-use std::fmt::Display;
-
 use crossterm::event::{read, Event, KeyCode};
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Style, Stylize};
 use ratatui::widgets::{Block, Borders, List, ListDirection, Paragraph};
 use ratatui::{symbols, Frame};
+use std::fmt::Display;
 
 use crate::{
     error::Error,
@@ -14,11 +13,11 @@ use crate::{
 
 pub fn show(
     terminal: &mut LoadedTerminal,
-    content_spec: &InboxItem,
-    item_details: &ItemDetails,
+    item: &InboxItem,
+    details: &ItemDetails,
 ) -> Result<(), Error> {
     loop {
-        render(terminal, content_spec, item_details)?;
+        render(terminal, item, details)?;
         match read()? {
             Event::Key(key) if key.code == KeyCode::Char('q') => {
                 return Ok(());
@@ -34,8 +33,8 @@ fn indent(n: usize, s: impl Display) -> String {
 
 pub fn render(
     terminal: &mut LoadedTerminal,
-    content_spec: &InboxItem,
-    content_details: &ItemDetails,
+    item: &InboxItem,
+    details: &ItemDetails,
 ) -> Result<(), Error> {
     let draw = |frame: &mut Frame| {
         let main_layout = Layout::default()
@@ -61,7 +60,7 @@ pub fn render(
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .title("Sender:")
             .title_style(Style::new().bold());
-        let sender_text = indent(2, &content_spec.sender_name);
+        let sender_text = indent(2, &item.sender_name);
         let sender_widget = Paragraph::new(sender_text).block(sender_block);
         frame.render_widget(sender_widget, top_layout[0]);
 
@@ -69,7 +68,7 @@ pub fn render(
             .borders(Borders::TOP | Borders::RIGHT)
             .title("Created at:")
             .title_style(Style::new().bold());
-        let created_text = indent(2, content_spec.created_at.format("%Y-%m-%d %H:%M"));
+        let created_text = indent(2, item.created_at.format("%Y-%m-%d %H:%M"));
         let created_widget = Paragraph::new(created_text).block(created_block);
         frame.render_widget(created_widget, top_layout[1]);
 
@@ -82,7 +81,7 @@ pub fn render(
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .title("Subject:")
             .title_style(Style::new().bold());
-        let subject_text = indent(2, &content_spec.subject);
+        let subject_text = indent(2, &item.subject);
         let subject_widget = Paragraph::new(subject_text).block(subject_block);
         frame.render_widget(subject_widget, main_layout[1]);
 
@@ -95,8 +94,8 @@ pub fn render(
             .borders(Borders::ALL)
             .title("Attachments:")
             .title_style(Style::new().bold());
-        let attachments: Vec<String> = (0..(content_details.parts.len()))
-            .map(|i| content_details.attachment_name(i).unwrap())
+        let attachments: Vec<String> = (0..(details.parts.len()))
+            .map(|i| details.attachment_name(i).unwrap())
             .collect();
         let subject_widget = List::new(attachments)
             .block(attachments_block)
