@@ -10,6 +10,10 @@ pub enum Error {
     RandError(rand::Error),
     #[error("QR code generation failed")]
     QRError(super::qr::Error),
+    #[error("IO error encountered")]
+    IOError(std::io::Error),
+    #[error("Application error")]
+    AppError(String),
 }
 
 impl From<reqwest::Error> for Error {
@@ -26,4 +30,8 @@ impl From<rand::Error> for Error {
 
 impl From<super::qr::Error> for Error {
     fn from(e: super::qr::Error) -> Error { Error::QRError(e) }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Error { Error::IOError(e) }
 }
