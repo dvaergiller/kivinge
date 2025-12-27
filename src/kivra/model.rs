@@ -120,3 +120,19 @@ pub struct ContentSpec {
     // pub tags: // null
     // pub form: //null
 }
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ContentDetails {
+    pub parts: Vec<Attachment>
+
+}
+
+pub type AttachmentKey = String;
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Attachment {
+    pub name: String,
+    pub content_type: String,
+    pub size: usize,
+    pub key: AttachmentKey,
+}
