@@ -8,13 +8,11 @@ use fuser::{
     mount2, FileAttr, FileType, Filesystem, MountOption, ReplyData,
     ReplyDirectory, Request,
 };
-use libc::{EFAULT, EINVAL, ENOENT};
-use tracing::{debug, error, info, warn};
+use libc::{EFAULT, EINVAL, EISDIR, ENOENT};
+use tracing::{debug, error, warn};
 
 use crate::{
-    client::Client,
-    error::Error,
-    model::content::InboxListing,
+    cache::Cache, client::Client, error::Error, model::content::{Attachment, InboxEntry, InboxListing, ItemDetails}
 };
 
 pub fn mount(
@@ -22,7 +20,12 @@ pub fn mount(
     mountpoint: &Path,
 ) -> Result<(), Error> {
     let filesystem =
-        KivraFS { client, inbox_listing: InboxListing::default() };
+        KivraFS {
+            client,
+            inbox_listing: InboxListing::default(),
+            inode_cache: Cache::default(),
+            attachment_cache: Cache::default(),
+        };
     let mount_options = [
         MountOption::FSName("kivinge".to_string()),
         MountOption::DefaultPermissions,
@@ -33,33 +36,28 @@ pub fn mount(
     Ok(())
 }
 
+#[derive(Clone)]
 enum Inode {
     Root,
-    InboxEntry { inbox_entry_id: u32 },
-    Attachment { inbox_entry_id: u32, attachment_id: u32, size: u64 },
+    InboxEntry {
+        entry: InboxEntry,
+        details: Option<ItemDetails>,
+    },
+    Attachment {
+        inbox_entry_id: u32,
+        item_key: String,
+        attachment_id: u32,
+        attachment: Attachment,
+    },
 }
 
 impl Inode {
     fn to_u64(&self) -> u64 {
         match self {
             Inode::Root => 1,
-            Inode::InboxEntry { inbox_entry_id } => *inbox_entry_id as u64 + 1,
+            Inode::InboxEntry { entry, .. } => entry.id as u64 + 1,
             Inode::Attachment { inbox_entry_id, attachment_id, .. } => {
                 (*inbox_entry_id as u64 + 1).shl(32) + (*attachment_id as u64)
-            }
-        }
-    }
-
-    fn from_u64(number: u64) -> Inode {
-        if number == 1 {
-            Inode::Root
-        } else if number.shr(32) == (0 as u64) {
-            Inode::InboxEntry { inbox_entry_id: number as u32 - 1 }
-        } else {
-            Inode::Attachment {
-                inbox_entry_id: number.shr(32) as u32 - 1,
-                attachment_id: (number & 0xFFFFFFFF) as u32,
-                size: 0,
             }
         }
     }
@@ -67,11 +65,11 @@ impl Inode {
     fn attr(&self) -> FileAttr {
         let (kind, perm, size) = match self {
             Inode::Root => (FileType::Directory, 0o500, 0u64),
-            Inode::InboxEntry { inbox_entry_id: _ } => {
+            Inode::InboxEntry { .. } => {
                 (FileType::Directory, 0o500, 0u64)
             }
-            Inode::Attachment { inbox_entry_id: _, attachment_id: _, size } => {
-                (FileType::RegularFile, 0o400, *size)
+            Inode::Attachment { attachment, .. } => {
+                (FileType::RegularFile, 0o400, attachment.size as u64)
             }
         };
         let blksize = 512u32;
@@ -98,6 +96,18 @@ impl Inode {
 struct KivraFS<'a, C: Client> {
     client: &'a mut C,
     inbox_listing: InboxListing,
+    inode_cache: Cache<u64, Inode>,
+    attachment_cache: Cache<u64, Attachment>,
+}
+
+impl<'a, C: Client> KivraFS<'a, C> {
+    fn inode(&self, inode_id: u64) -> Option<Inode> {
+        if inode_id == 1 {
+            return Some(Inode::Root);
+        }
+
+        self.inode_cache.lookup(&inode_id).cloned()
+    }
 }
 
 const TTL: Duration = Duration::from_secs(60);
@@ -110,34 +120,27 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         name: &std::ffi::OsStr,
         reply: fuser::ReplyEntry,
     ) {
-        let parent_inode = Inode::from_u64(parent);
+        let parent_inode = self.inode(parent);
         match parent_inode {
-            Inode::Root => {
+            Some(Inode::Root) => {
                 let entry = self
                     .inbox_listing
-                    .iter()
+                    .into_iter()
                     .find(|e| name.to_str() == Some(&e.item.name()));
 
                 if let Some(e) = entry {
-                    let inode = Inode::InboxEntry { inbox_entry_id: e.id };
+                    let inode = Inode::InboxEntry {
+                        entry: e,
+                        details: None,
+                    };
                     reply.entry(&TTL, &inode.attr(), 0);
                 } else {
                     reply.error(ENOENT);
                 }
             }
 
-            Inode::InboxEntry { inbox_entry_id } => {
-                info!("Getting inbox entry {}", inbox_entry_id);
-                let entry_lookup =
-                    self.inbox_listing.iter().find(|e| e.id == inbox_entry_id);
-
-                if entry_lookup.is_none() {
-                    warn!("Inode does not exist");
-                    reply.error(ENOENT);
-                    return;
-                }
-
-                let entry = entry_lookup.unwrap();
+            Some(Inode::InboxEntry { entry, .. }) => {
+                debug!("Getting inbox entry {}", entry.id);
                 let details_res = self.client.get_item_details(&entry.item.key);
                 if let Err(e) = details_res {
                     error!("Failed to fetch details: {}", e);
@@ -147,28 +150,32 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
 
                 let details = details_res.unwrap();
                 let attachment_lookup =
-                    details.parts.iter().enumerate().find(|(id, _)| {
+                    details.parts.into_iter().enumerate().find(|(id, _)| {
                         debug!("Comparing {:?} to {:?}", name, details.attachment_name(*id));
                         name.to_str()
                             == details.attachment_name(*id).ok().as_deref()
                     });
 
                 if attachment_lookup.is_none() {
-                    warn!("No attachment with name {name:?}");
+                    debug!("No attachment with name {name:?}");
                     reply.error(ENOENT);
                     return;
                 }
                 let attachment = attachment_lookup.unwrap();
                 let inode = Inode::Attachment {
-                    inbox_entry_id,
+                    inbox_entry_id: entry.id,
                     attachment_id: attachment.0 as u32,
-                    size: attachment.1.size as u64,
+                    attachment: attachment.1,
                 };
                 reply.entry(&TTL, &inode.attr(), 0);
             }
 
-            Inode::Attachment { .. } => {
+            Some(Inode::Attachment { .. }) => {
                 reply.error(EINVAL);
+            }
+
+            None => {
+                reply.error(ENOENT);
             }
         }
     }
@@ -179,7 +186,10 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         ino: u64,
         reply: fuser::ReplyAttr,
     ) {
-        reply.attr(&TTL, &Inode::from_u64(ino).attr());
+        match self.inode(ino) {
+            Some(inode) => reply.attr(&TTL, &inode.attr()),
+            None => reply.error(ENOENT),
+        }
     }
 
     fn read(
@@ -193,10 +203,11 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         _lock: Option<u64>,
         reply: ReplyData,
     ) {
-        match Inode::from_u64(ino) {
-            Inode::Root => reply.error(EINVAL),
-            Inode::InboxEntry { inbox_entry_id: _ } => reply.error(EINVAL),
-            Inode::Attachment { inbox_entry_id, attachment_id, .. } => {
+        match self.inode(ino) {
+            None => reply.error(ENOENT),
+            Some(Inode::Root) => reply.error(EISDIR),
+            Some(Inode::InboxEntry { .. }) => reply.error(EISDIR),
+            Some(Inode::Attachment { inbox_entry_id, attachment, .. }) => {
                 let entry_lookup =
                     self.inbox_listing.iter().find(|e| e.id == inbox_entry_id);
                 if entry_lookup.is_none() {
@@ -205,25 +216,6 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                     return;
                 }
                 let entry = entry_lookup.unwrap();
-                let details_res = self.client.get_item_details(&entry.item.key);
-                if let Err(e) = details_res {
-                    error!("Failed to fetch details: {}", e);
-                    reply.error(EFAULT);
-                    return;
-                }
-                let details = details_res.unwrap();
-                let attachment_lookup = details
-                    .parts
-                    .into_iter()
-                    .enumerate()
-                    .find(|(id, _)| *id as u32 == attachment_id);
-
-                if attachment_lookup.is_none() {
-                    warn!("No here");
-                    reply.error(ENOENT);
-                    return;
-                }
-                let attachment = attachment_lookup.unwrap().1;
 
                 let data_res = self.client.download_attachment(
                     &entry.item.key,
@@ -256,8 +248,8 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         offset: i64,
         mut reply: ReplyDirectory,
     ) {
-        let entries: Vec<(Inode, String)> = match Inode::from_u64(ino) {
-            Inode::Root => {
+        let entries: Vec<(Inode, String)> = match self.inode(ino) {
+            Some(Inode::Root) => {
                 self.inbox_listing =
                     match self.client.get_inbox_listing() {
                         Ok(listing) => listing,
@@ -271,26 +263,18 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                     .iter()
                     .map(|entry| {
                         (
-                            Inode::InboxEntry { inbox_entry_id: entry.id },
+                            Inode::InboxEntry {
+                                inbox_entry_id: entry.id,
+                                item_key: entry.item.key.clone(),
+                            },
                             entry.item.name(),
                         )
                     })
                     .collect()
             }
 
-            Inode::InboxEntry { inbox_entry_id } => {
-                let entry_lookup = self
-                    .inbox_listing
-                    .iter()
-                    .find(|entry| entry.id == inbox_entry_id);
-                if entry_lookup.is_none() {
-                    warn!("Error here");
-                    reply.error(ENOENT);
-                    return;
-                }
-                let entry = entry_lookup.unwrap();
-                let details_res =
-                    self.client.get_item_details(&entry.item.key);
+            Some(Inode::InboxEntry { inbox_entry_id, item_key }) => {
+                let details_res = self.client.get_item_details(&item_key);
 
                 if let Err(e) = details_res {
                     error!("Failed to get item details: {}", e);
@@ -306,9 +290,11 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                     .map(|(i, part)| {
                         (
                             Inode::Attachment {
-                                inbox_entry_id: entry.id as u32,
+                                inbox_entry_id,
                                 attachment_id: i as u32,
                                 size: part.size as u64,
+                                item_key: item_key.clone(),
+                                attachment_key: part.key.clone(),
                             },
                             details.attachment_name(i).unwrap(),
                         )
@@ -316,15 +302,20 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                     .collect()
             }
 
-            Inode::Attachment { .. } => {
+            Some(Inode::Attachment { .. }) => {
                 reply.error(EINVAL); // Not a directory
+                return;
+            }
+
+            None => {
+                reply.error(ENOENT);
                 return;
             }
         };
 
         let dotlinks = vec![
-            (Inode::InboxEntry { inbox_entry_id: 1 }, ".".to_string()),
-            (Inode::InboxEntry { inbox_entry_id: 1 }, "..".to_string()),
+            (Inode::InboxEntry { inbox_entry_id: 1, item_key: String::new() }, ".".to_string()),
+            (Inode::InboxEntry { inbox_entry_id: 1, item_key: String::new() }, "..".to_string()),
         ];
 
         let contents = (&dotlinks)
