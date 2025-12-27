@@ -13,9 +13,10 @@ pub fn client() -> Client {
 
 pub fn get_config(client: &Client) -> Result<Config, Error> {
     Ok(client
-        .get(format!("{ACCOUNTS_URL}/config.json"))
-        .send()?
-        .json()?)
+       .get(format!("{ACCOUNTS_URL}/config.json"))
+       .send()?
+       .error_for_status()?
+       .json()?)
 }
 
 pub fn start_auth(client: &Client, config: &Config) -> Result<(String, AuthResponse), Error> {
@@ -35,12 +36,17 @@ pub fn start_auth(client: &Client, config: &Config) -> Result<(String, AuthRespo
         .post(format!("{API_URL}/v2/oauth2/authorize"))
         .json(&auth_request)
         .send()?
+        .error_for_status()?
         .json()?;
     Ok((String::from_utf8(verifier).unwrap(), resp))
 }
 
 pub fn check_auth(client: &Client, poll_url: &String) -> Result<AuthStatus, Error> {
-    Ok(client.get(format!("{API_URL}{poll_url}")).send()?.json()?)
+    Ok(client
+       .get(format!("{API_URL}{poll_url}"))
+       .send()?
+       .error_for_status()?
+       .json()?)
 }
 
 pub fn abort_auth(client: &Client, poll_url: &String) -> Result<(), Error> {
@@ -54,12 +60,12 @@ pub fn abort_auth(client: &Client, poll_url: &String) -> Result<(), Error> {
 pub fn get_auth_token(
     client: &Client,
     config: &Config,
-    auth_response: &AuthResponse,
+    auth_code: String,
     verifier: String,
 ) -> Result<AuthTokenResponse, Error> {
     let token_request = AuthTokenRequest {
         client_id: config.oauth_default_client_id.clone(),
-        code: auth_response.code.clone(),
+        code: auth_code,
         code_verifier: verifier,
         grant_type: "authorization_code".to_string(),
         redirect_uri: config.oauth_default_redirect_uri.clone(),
@@ -67,7 +73,8 @@ pub fn get_auth_token(
     let resp = client
         .post(format!("{API_URL}/v2/oauth2/token"))
         .json(&token_request)
-        .send()?;
+        .send()?
+        .error_for_status()?;
     Ok(resp.json()?)
 }
 
@@ -86,9 +93,10 @@ pub fn revoke_auth_token(client: &Client, session: Session) -> Result<(), Error>
 pub fn get_inbox_listing(client: &Client, session: &Session) -> Result<Vec<ContentSpec>, Error> {
     let user_id = &session.user_info.kivra_user_id;
     Ok(client
-        .get(format!("{API_URL}/v3/user/{user_id}/content"))
-        .query(&[("listing", "all")])
-        .bearer_auth(&session.access_token)
-        .send()?
-        .json()?)
+       .get(format!("{API_URL}/v3/user/{user_id}/content"))
+       .query(&[("listing", "all")])
+       .bearer_auth(&session.access_token)
+       .send()?
+       .error_for_status()?
+       .json()?)
 }

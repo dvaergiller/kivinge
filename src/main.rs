@@ -1,12 +1,14 @@
 use clap::{Parser, Subcommand};
-use std::thread::sleep;
 
-use kivinge::kivra::{error::Error, model::*, qr, request, session};
-use kivinge::{terminal, terminal::prelude, terminal::widgets};
+use kivinge::kivra::{error::Error, request, session};
+use kivinge::{terminal, view};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct CliArgs {
+    #[arg(long)]
+    preview: bool,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -27,8 +29,10 @@ fn main() {
 }
 
 fn run(cli_args: CliArgs) -> Result<(), Error> {
+    let mut terminal = terminal::load()?;
     let client = request::client();
     match cli_args.command {
+        Command::Login if cli_args.preview => view::login::test_render(&mut terminal),
         Command::Login => load_session_or_login(&client).and(Ok(())),
 
         Command::List => {
@@ -55,44 +59,15 @@ fn load_session_or_login(client: &request::Client) -> Result<session::Session, E
         return Ok(session);
     }
 
-    let auth_response = login(client)?;
-    let session = session::make(auth_response.access_token, auth_response.id_token)?;
-    session::save(&session)?;
-    Ok(session)
-}
-
-fn login(client: &request::Client) -> Result<AuthTokenResponse, Error> {
-    let config = request::get_config(client)?;
     let mut terminal = terminal::load()?;
-    let (verifier, auth_resp) = request::start_auth(client, &config)?;
-    let qrcode = qr::encode(&auth_resp.qr_code)?;
-
-    terminal.clear()?;
-    terminal.draw(|f| ui_show_login_qr_code(f, &qrcode))?;
-
-    loop {
-        let mut status = request::check_auth(client, &auth_resp.next_poll_url)?;
-
-        match (status.retry_after, &status.next_poll_url, &status.ssn) {
-            (Some(retry_after), Some(next_poll_url), _) => {
-                sleep(std::time::Duration::from_secs(retry_after.into()));
-                status = request::check_auth(client, next_poll_url)?;
-                let qrcode = qr::encode(&status.qr_code)?;
-                terminal.draw(|f| ui_show_login_qr_code(f, &qrcode))?;
-            }
-            (_, _, Some(_)) => {
-                return request::get_auth_token(client, &config, &auth_resp, verifier);
-            }
-            (_, _, _) => return Err(Error::AppError("I dont know".to_string())),
+    match view::login::show(&mut terminal, client)? {
+        Some(auth_response) => {
+            let session = session::make(auth_response.access_token, auth_response.id_token)?;
+            session::save(&session)?;
+            Ok(session)
+        }
+        None => {
+            Err(Error::AppError("Login aborted".to_string()))
         }
     }
-}
-
-fn ui_show_login_qr_code(frame: &mut prelude::Frame, qr_code: &str) {
-    let title = "Authenticate with BankID";
-    let block = widgets::Block::default()
-        .title(title)
-        .borders(widgets::Borders::ALL);
-    let paragraph = widgets::Paragraph::new(qr_code).block(block);
-    frame.render_widget(paragraph, frame.size());
 }
