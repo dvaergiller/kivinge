@@ -50,7 +50,7 @@ pub enum Status {
     Read,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InboxEntry {
     pub id: u32,
     pub item: InboxItem,

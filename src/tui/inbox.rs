@@ -1,86 +1,83 @@
 use chrono::{Local, TimeZone};
 use ratatui::{
-    layout::Constraint,
+    layout::{Constraint, Rect},
     style::{Modifier, Style, Stylize},
     widgets::{Block, Cell, Row, Table, TableState},
     Frame,
 };
 
-use super::{
-    inbox_item,
-    keymap::{read_key, KeyEvent},
-    terminal::LoadedTerminal,
-};
+use super::{keymap::KeyEvent, Command, Event, TuiView};
 use crate::{
     client::{session::Session, Client},
     error::Error,
     model::content::{InboxEntry, InboxListing, Status},
 };
 
-pub fn show(
-    client: &impl Client,
-    session: &Session,
-    terminal: &mut LoadedTerminal,
+pub struct InboxView {
     inbox: InboxListing,
-) -> Result<(), Error> {
-    let mut widget_state = TableState::new().with_selected(0);
-    loop {
-        render(terminal, &inbox, &mut widget_state)?;
-        match read_key()? {
-            KeyEvent::Quit => {
-                return Ok(());
-            }
+    table_state: TableState,
+}
 
-            KeyEvent::Up => {
-                let select = match widget_state.selected().unwrap_or(0) {
-                    0 => 0,
-                    n => n - 1,
-                };
-                widget_state.select(Some(select));
-            }
-
-            KeyEvent::Down => {
-                let select = match widget_state.selected().unwrap_or(0) {
-                    n if n >= inbox.len() - 1 => n,
-                    n => n + 1,
-                };
-                widget_state.select(Some(select));
-            }
-
-            KeyEvent::Select => match widget_state.selected() {
-                None => (),
-                Some(selected) => {
-                    let index = inbox.len() - 1 - selected;
-                    let entry = inbox.get(index).ok_or(Error::AppError(
-                        "Selected item out of bounds",
-                    ))?;
-                    let details =
-                        client.get_item_details(session, &entry.item.key)?;
-                    inbox_item::show(
-                        client,
-                        session,
-                        terminal,
-                        &entry.item,
-                        &details,
-                    )?;
-                }
-            },
-            _ => (),
-        }
+impl InboxView {
+    pub fn make(
+        client: &impl Client,
+        session: &Session,
+    ) -> Result<InboxView, Error> {
+        let inbox = client.get_inbox_listing(session)?;
+        let table_state = TableState::new().with_selected(Some(0));
+        Ok(InboxView { inbox, table_state })
     }
 }
 
-pub fn render(
-    terminal: &mut LoadedTerminal,
-    inbox: &InboxListing,
-    widget_state: &mut TableState,
-) -> Result<(), Error> {
-    let widget = inbox_widget(inbox);
-    let draw = |frame: &mut Frame| {
-        frame.render_stateful_widget(widget, frame.size(), widget_state);
-    };
-    terminal.draw(draw)?;
-    Ok(())
+impl TuiView for InboxView {
+    type ReturnType = Option<InboxEntry>;
+
+    fn update(
+        &mut self,
+        event: Event,
+    ) -> Result<Command<Self::ReturnType>, Error> {
+        match event {
+            Event::Key(KeyEvent::Quit) => Ok(Command::Return(None)),
+
+            Event::Key(KeyEvent::Up) => {
+                let select = match self.table_state.selected().unwrap_or(0) {
+                    0 => 0,
+                    n => n - 1,
+                };
+                self.table_state.select(Some(select));
+                Ok(Command::AwaitKey)
+            }
+
+            Event::Key(KeyEvent::Down) => {
+                let select = match self.table_state.selected().unwrap_or(0) {
+                    n if n >= self.inbox.len() - 1 => n,
+                    n => n + 1,
+                };
+                self.table_state.select(Some(select));
+                Ok(Command::AwaitKey)
+            }
+
+            Event::Key(KeyEvent::Select) => match self.table_state.selected() {
+                None => Ok(Command::AwaitKey),
+                Some(selected) => {
+                    let index = self.inbox.len() - 1 - selected;
+                    let entry = self
+                        .inbox
+                        .get(index)
+                        .ok_or(Error::AppError("Selected item out of bounds"))?
+                        .clone();
+                    Ok(Command::Return(Some(entry)))
+                }
+            },
+
+            _ => Ok(Command::AwaitKey),
+        }
+    }
+
+    fn render(&mut self, frame: &mut Frame, rect: Rect) {
+        let widget = inbox_widget(&self.inbox);
+        frame.render_stateful_widget(widget, rect, &mut self.table_state);
+    }
 }
 
 fn inbox_widget(inbox: &InboxListing) -> Table<'static> {

@@ -8,9 +8,14 @@ use std::path::PathBuf;
 
 use kivinge::{
     cli,
-    client::{self, session, Client},
+    client::{
+        self,
+        session::{self, Session},
+        Client,
+    },
     error::Error,
-    tui,
+    model::content::InboxItem,
+    tui::{self, inbox_item::ItemViewResult, terminal::LoadedTerminal},
     util::{
         download_attachment, get_entry_by_id, load_session_or_login,
         open_attachment,
@@ -154,10 +159,49 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
 
         Command::Tui => {
             let session = load_session_or_login(&client)?;
-            let inbox = client.get_inbox_listing(&session)?;
             let mut terminal = tui::terminal::load()?;
-            tui::inbox::show(&client, &session, &mut terminal, inbox)?;
+            show_inbox_tui(&mut terminal, &client, &session)?;
             Ok(())
+        }
+    }
+}
+
+fn show_inbox_tui(
+    terminal: &mut LoadedTerminal,
+    client: &impl Client,
+    session: &Session,
+) -> Result<(), Error> {
+    let mut inbox_view = tui::inbox::InboxView::make(client, session)?;
+    loop {
+        let ret = tui::show(&mut inbox_view, terminal, Some(session))?;
+        match ret {
+            Some(entry) => {
+                show_inbox_item_tui(terminal, client, session, entry.item)?;
+            }
+
+            None => return Ok(()),
+        }
+    }
+}
+
+fn show_inbox_item_tui(
+    terminal: &mut LoadedTerminal,
+    client: &impl Client,
+    session: &Session,
+    item: InboxItem,
+) -> Result<(), Error> {
+    let mut entry_view =
+        tui::inbox_item::ItemView::make(client, session, item.clone())?;
+    loop {
+        let ret = tui::show(&mut entry_view, terminal, Some(session))?;
+        match ret {
+            ItemViewResult::Close => return Ok(()),
+            ItemViewResult::MarkRead => {
+                client.mark_as_read(session, &item.key)?;
+            }
+            ItemViewResult::Open(attachment_num) => {
+                open_attachment(client, session, &item, attachment_num)?;
+            }
         }
     }
 }

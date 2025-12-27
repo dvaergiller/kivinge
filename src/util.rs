@@ -74,9 +74,9 @@ pub fn download_attachment(
     attachment_num: u32,
     download_dir: PathBuf,
 ) -> Result<PathBuf, Error> {
-    let details = client.get_item_details(&session, &item.key)?;
+    let details = client.get_item_details(session, &item.key)?;
     let file =
-        get_attachment_body(client, &session, &item, &details, attachment_num)?;
+        get_attachment_body(client, session, item, &details, attachment_num)?;
     let filename = details.attachment_name(attachment_num as usize)?;
     let full_path = Path::new(&download_dir).join(filename);
     File::create_new(&full_path)?.write_all(&file)?;

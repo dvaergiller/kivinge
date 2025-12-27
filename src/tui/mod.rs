@@ -23,10 +23,10 @@ pub trait TuiView {
     type ReturnType;
 
     fn update(
-        self: &mut Self,
+        &mut self,
         event: Event,
     ) -> Result<Command<Self::ReturnType>, Error>;
-    fn render(self: &mut Self, frame: &mut Frame, rect: Rect);
+    fn render(&mut self, frame: &mut Frame, rect: Rect);
 }
 
 pub enum Command<Ret> {
