@@ -24,7 +24,7 @@ macro_rules! post {
 
 macro_rules! delete {
     ($self:ident, $pattern:literal) => {
-        $self.client.post(format!($pattern))
+        $self.client.delete(format!($pattern))
     };
 }
 
