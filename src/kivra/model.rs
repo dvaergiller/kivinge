@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

@@ -194,9 +194,9 @@ fn get_attachment_body(
     item_id: u32,
     attachment_num: u32,
 ) -> Result<Bytes, Error> {
-    let inbox = client.get_inbox_listing(&session)?;
+    let inbox = client.get_inbox_listing(session)?;
     let entry = get_entry_by_id(inbox, item_id)?;
-    let details = client.get_item_details(&session, &entry.item.key)?;
+    let details = client.get_item_details(session, &entry.item.key)?;
     let attachment = details
         .parts
         .get(attachment_num as usize)
@@ -207,7 +207,7 @@ fn get_attachment_body(
         (None, None) => Err(Error::AppError(
             "Attachment has no attachment key nor inline body".to_string(),
         )),
-        (Some(key), _) => client.download_attachment(&session, &entry.item.key, &key),
+        (Some(key), _) => client.download_attachment(session, &entry.item.key, key),
         (_, Some(body)) => Ok(Bytes::copy_from_slice(body)),
     }
 }
