@@ -171,8 +171,8 @@ fn show_inbox_tui(
     client: &impl Client,
     session: &Session,
 ) -> Result<(), Error> {
-    let mut inbox_view = tui::inbox::InboxView::make(client, session)?;
     loop {
+        let mut inbox_view = tui::inbox::InboxView::make(client, session)?;
         let ret = tui::show(&mut inbox_view, terminal, Some(session))?;
         match ret {
             Some(entry) => {

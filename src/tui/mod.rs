@@ -14,7 +14,7 @@ use crate::{client::session::Session, error::Error};
 
 pub mod inbox;
 pub mod inbox_item;
-pub mod keymap;
+mod keymap;
 pub mod login;
 pub mod qr;
 pub mod terminal;
@@ -53,7 +53,6 @@ pub fn show<Ret>(
             let subview_rect = render_main(frame, session);
             view.render(frame, subview_rect);
         };
-        terminal.clear()?;
         terminal.draw(draw)?;
 
         match command {

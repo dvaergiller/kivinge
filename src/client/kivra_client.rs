@@ -144,6 +144,7 @@ impl Client for KivraClient {
             .post(format!(
                 "{API_URL}/v2/user/{user_id}/content/{item_key}/view"
             ))
+            .header("content-type", "application/json")
             .bearer_auth(&session.access_token)
             .send()?
             .error_for_status()?;
