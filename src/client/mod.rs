@@ -80,11 +80,31 @@ pub trait Client {
         attachment_key: &str,
     ) -> Result<Bytes, Error>;
 
+    fn set_session(&mut self, session: Session);
+
     fn get_session(&self) -> Option<Session>;
 
-    fn get_or_load_session(&mut self) -> Result<Option<Session>, Error>;
+    fn login(&mut self) -> Result<Session, Error>;
 
-    fn get_session_or_login(&mut self) -> Result<Session, Error>;
+    fn get_or_load_session(&mut self) -> Result<Option<Session>, Error> {
+        let opt_session = self.get_session().or(session::try_load()?);
+        if let Some(session) = opt_session {
+            self.set_session(session.clone());
+            Ok(Some(session.clone()))
+        }
+        else {
+            Ok(None)
+        }
+    }
+
+    fn get_session_or_login(&mut self) -> Result<Session, Error> {
+        if let Some(session) = self.get_or_load_session()? {
+            Ok(session)
+        }
+        else {
+            self.login()
+        }
+    }
 }
 
 impl Client for Box<dyn Client> {
@@ -143,15 +163,15 @@ impl Client for Box<dyn Client> {
         (**self).download_attachment(item_key, attachment_key)
     }
 
+    fn login(&mut self) -> Result<Session, Error> {
+        (**self).login()
+    }
+
     fn get_session(&self) -> Option<Session> {
         (**self).get_session()
     }
 
-    fn get_or_load_session(&mut self) -> Result<Option<Session>, Error> {
-        (**self).get_or_load_session()
-    }
-
-    fn get_session_or_login(&mut self) -> Result<Session, Error> {
-        (**self).get_session_or_login()
+    fn set_session(&mut self, session: Session) {
+        (**self).set_session(session)
     }
 }
