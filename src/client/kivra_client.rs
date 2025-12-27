@@ -134,6 +134,21 @@ impl Client for KivraClient {
         Ok(details)
     }
 
+    fn mark_as_read(
+        &self,
+        session: &Session,
+        item_key: &str,
+    ) -> Result<(), Error> {
+        let user_id = &session.user_info.kivra_user_id;
+        self
+            .client
+            .post(format!("{API_URL}/v2/user/{user_id}/content/{item_key}/view"))
+            .bearer_auth(&session.access_token)
+            .send()?
+            .error_for_status()?;
+        Ok(())
+    }
+
     fn download_attachment(
         &self,
         session: &Session,

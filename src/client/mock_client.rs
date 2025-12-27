@@ -79,6 +79,14 @@ impl Client for MockClient {
         Ok(details)
     }
 
+    fn mark_as_read(
+        &self,
+        _session: &Session,
+        _item_key: &str,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
     fn download_attachment(
         &self,
         _session: &Session,
