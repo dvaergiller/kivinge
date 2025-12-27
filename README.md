@@ -8,6 +8,12 @@ Kivra in any way. Do not contact Kivra for support or other requests regarding
 this client. This client may break at any time if Kivra publishes changes to
 their service.**
 
+## Project Status
+
+This project is in early development. There are likely bugs and missing features.
+If you encounter any issues or have suggestions, please [open an issue on
+GitHub](https://github.com/dvaergiller/kivinge/issues).
+
 ## Prerequisites
 
 - Rust toolchain (install via [rustup](https://rustup.rs/))
@@ -32,7 +38,7 @@ sudo pacman -S openssl fuse3
 cargo install --path .
 ```
 
-### Shell Completions
+### Shell Completions (optional)
 
 Generate shell completions for your shell:
 
@@ -118,18 +124,18 @@ kivinge mount ~/kivra
 The filesystem runs as a background daemon. To unmount:
 
 ```bash
-fusermount -u ~/kivra
+umount ~/kivra
 ```
 
 ### Structure
 
 ```
 ~/kivra/
-  2024-01-15 - Company Name - Invoice.pdf/
-    Invoice.pdf
-  2024-01-10 - Another Sender - Document/
-    Document.pdf
-    Attachment.pdf
+  0002_2024-01-15_Company-Name_Invoice/
+    2024-01-15T12:00:00+00:00-0-Company-Name-Invoice.pdf
+  0001_2024-01-10_Another-Sender_Document/
+    2024-01-10T14:22:11+00:00-0-Another-Sender-Document.pdf
+    2024-01-10T14:22:11+00:00-1-Another-Sender-Attachment.pdf
 ```
 
 Each inbox item becomes a directory containing its attachments.
