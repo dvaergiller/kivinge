@@ -7,7 +7,9 @@ use std::{
     panic,
 };
 
-use crate::error::Error;
+use crate::client::Client;
+
+use super::Error;
 
 #[derive(Debug)]
 pub struct LoadedTerminal(Terminal<CrosstermBackend<io::Stdout>>);

@@ -2,8 +2,7 @@ use bytes::Bytes;
 use std::cell::RefCell;
 use std::include_str;
 
-use super::{Client, Session};
-use crate::error::Error;
+use super::{Client, Error, Session};
 use crate::model::{auth::*, content::*, Config};
 
 #[derive(Default)]
@@ -56,40 +55,28 @@ impl Client for MockClient {
         Ok(response)
     }
 
-    fn revoke_auth_token(&self, _session: &Session) -> Result<(), Error> {
+    fn revoke_auth_token(&mut self) -> Result<(), Error> {
         Ok(())
     }
 
-    fn get_inbox_listing(
-        &self,
-        _session: &Session,
-    ) -> Result<InboxListing, Error> {
+    fn get_inbox_listing(&mut self) -> Result<InboxListing, Error> {
         let input = include_str!("test_data/inbox.json");
         let listing = serde_json::from_str(input)?;
         Ok(InboxListing::from_content_specs(listing))
     }
 
-    fn get_item_details(
-        &self,
-        _session: &Session,
-        _item_key: &str,
-    ) -> Result<ItemDetails, Error> {
+    fn get_item_details(&mut self, _item_key: &str) -> Result<ItemDetails, Error> {
         let input = include_str!("test_data/details.json");
         let details = serde_json::from_str(input)?;
         Ok(details)
     }
 
-    fn mark_as_read(
-        &self,
-        _session: &Session,
-        _item_key: &str,
-    ) -> Result<(), Error> {
+    fn mark_as_read(&mut self, _item_key: &str) -> Result<(), Error> {
         Ok(())
     }
 
     fn download_attachment(
-        &self,
-        _session: &Session,
+         &mut self,
         _item_key: &str,
         _attachment_key: &str,
     ) -> Result<Bytes, Error> {

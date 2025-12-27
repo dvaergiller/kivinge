@@ -12,18 +12,17 @@ use libc::{EFAULT, EINVAL, ENOENT};
 use tracing::{debug, error, info, warn};
 
 use crate::{
-    client::{session::Session, Client},
+    client::Client,
     error::Error,
     model::content::InboxListing,
 };
 
 pub fn mount(
-    client: &impl Client,
-    session: &Session,
+    client: &mut impl Client,
     mountpoint: &Path,
 ) -> Result<(), Error> {
     let filesystem =
-        KivraFS { client, session, inbox_listing: InboxListing::default() };
+        KivraFS { client, inbox_listing: InboxListing::default() };
     let mount_options = [
         MountOption::FSName("kivinge".to_string()),
         MountOption::DefaultPermissions,
@@ -96,8 +95,7 @@ impl Inode {
 }
 
 struct KivraFS<'a, C: Client> {
-    client: &'a C,
-    session: &'a Session,
+    client: &'a mut C,
     inbox_listing: InboxListing,
 }
 
@@ -139,8 +137,7 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                 }
 
                 let entry = entry_lookup.unwrap();
-                let details_res =
-                    self.client.get_item_details(self.session, &entry.item.key);
+                let details_res = self.client.get_item_details(&entry.item.key);
                 if let Err(e) = details_res {
                     error!("Failed to fetch details: {}", e);
                     reply.error(EFAULT);
@@ -207,8 +204,7 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                     return;
                 }
                 let entry = entry_lookup.unwrap();
-                let details_res =
-                    self.client.get_item_details(self.session, &entry.item.key);
+                let details_res = self.client.get_item_details(&entry.item.key);
                 if let Err(e) = details_res {
                     error!("Failed to fetch details: {}", e);
                     reply.error(EFAULT);
@@ -229,7 +225,6 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                 let attachment = attachment_lookup.unwrap().1;
 
                 let data_res = self.client.download_attachment(
-                    &self.session,
                     &entry.item.key,
                     &attachment.key.unwrap(),
                 );
@@ -263,7 +258,7 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
         let entries: Vec<(Inode, String)> = match Inode::from_u64(ino) {
             Inode::Root => {
                 self.inbox_listing =
-                    match self.client.get_inbox_listing(&self.session) {
+                    match self.client.get_inbox_listing() {
                         Ok(listing) => listing,
                         Err(err) => {
                             error!("Failed to get inbox listing: {}", err);
@@ -294,7 +289,7 @@ impl<'a, C: Client> Filesystem for KivraFS<'a, C> {
                 }
                 let entry = entry_lookup.unwrap();
                 let details_res =
-                    self.client.get_item_details(self.session, &entry.item.key);
+                    self.client.get_item_details(&entry.item.key);
 
                 if let Err(e) = details_res {
                     error!("Failed to get item details: {}", e);

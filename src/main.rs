@@ -9,17 +9,14 @@ use std::path::PathBuf;
 use kivinge::{
     cli,
     client::{
-        self,
-        session::{self, Session},
-        Client,
+        self, Client, session::{self, Session}, session_manager::SessionManager
     },
     error::Error,
     fuse,
     model::content::InboxItem,
     tui::{self, inbox_item::ItemViewResult, terminal::LoadedTerminal},
     util::{
-        download_attachment, get_entry_by_id, load_session_or_login,
-        open_attachment,
+        download_attachment, get_entry_by_id, open_attachment,
     },
 };
 
@@ -105,6 +102,8 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
         Box::new(client::KivraClient::default())
     };
 
+    let session_manager = SessionManager::new();
+
     match cli_args.command {
         Command::Completions { shell } => {
             match shell {
@@ -117,7 +116,10 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             Ok(())
         }
 
-        Command::Login => load_session_or_login(&client).and(Ok(())),
+        Command::Login => {
+            session_manager.get_session_or_login(&client)?;
+            Ok(())
+        }
 
         Command::List => {
             let session = load_session_or_login(&client)?;
@@ -160,7 +162,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             let session = session::try_load()?
                 .ok_or(Error::UserError("No session found"))?;
             client.revoke_auth_token(&session)?;
-            session::delete_saved()
+            Ok(session::delete_saved()?)
         }
 
         Command::Tui => {

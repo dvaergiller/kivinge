@@ -7,16 +7,11 @@ use ratatui::widgets::{
 use ratatui::{symbols, Frame};
 use std::fmt::Display;
 
-use crate::client::session::Session;
 use crate::client::Client;
 use crate::model::content::Status;
-use crate::{
-    error::Error,
-    model::content::{InboxItem, ItemDetails},
-};
-
+use crate::model::content::{InboxItem, ItemDetails};
 use super::keymap::KeyEvent;
-use super::{Command, Event, TuiView};
+use super::{Command, Event, Error, TuiView};
 
 pub struct ItemView {
     item: InboxItem,
@@ -32,11 +27,10 @@ pub enum ItemViewResult {
 
 impl ItemView {
     pub fn make(
-        client: &impl Client,
-        session: &Session,
+        client: &mut impl Client,
         item: InboxItem,
     ) -> Result<ItemView, Error> {
-        let details = client.get_item_details(session, &item.key)?;
+        let details = client.get_item_details(&item.key)?;
         let list_state = match details.parts.len() {
             0 => ListState::default(),
             _ => ListState::default().with_selected(Some(0)),

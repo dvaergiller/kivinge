@@ -6,10 +6,9 @@ use ratatui::{
     Frame,
 };
 
-use super::{keymap::KeyEvent, Command, Event, TuiView};
+use super::{keymap::KeyEvent, Command, Event, Error, TuiView};
 use crate::{
-    client::{session::Session, Client},
-    error::Error,
+    client::Client,
     model::content::{InboxEntry, InboxListing, Status},
 };
 
@@ -19,11 +18,8 @@ pub struct InboxView {
 }
 
 impl InboxView {
-    pub fn make(
-        client: &impl Client,
-        session: &Session,
-    ) -> Result<InboxView, Error> {
-        let inbox = client.get_inbox_listing(session)?;
+    pub fn make(client: &mut impl Client) -> Result<InboxView, Error> {
+        let inbox = client.get_inbox_listing()?;
         let table_state = TableState::new().with_selected(Some(0));
         Ok(InboxView { inbox, table_state })
     }

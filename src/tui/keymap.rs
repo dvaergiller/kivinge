@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyCode};
 
-use crate::error::Error;
+use super::Error;
 
 pub enum KeyEvent {
     Up,

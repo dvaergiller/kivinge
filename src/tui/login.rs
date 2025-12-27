@@ -1,10 +1,9 @@
 use ratatui::{layout::Rect, prelude, widgets};
 use std::time::Duration;
 
-use super::{keymap::KeyEvent, qr, Command, Event, TuiView};
+use super::{keymap::KeyEvent, qr, Command, Event, Error, TuiView};
 use crate::{
     client::Client,
-    error::Error,
     model::{
         auth::{AuthCode, AuthTokenResponse},
         Config,

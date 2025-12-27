@@ -7,34 +7,10 @@ use std::{
 use bytes::Bytes;
 
 use crate::{
-    client::{session, Client},
+    client::Client,
     error::Error,
     model::content::{InboxEntry, InboxItem, InboxListing, ItemDetails},
-    tui,
 };
-
-pub fn load_session_or_login(
-    client: &impl Client,
-) -> Result<session::Session, Error> {
-    let loaded = session::try_load()?;
-    if let Some(session) = loaded {
-        return Ok(session);
-    }
-
-    let mut terminal = tui::terminal::load()?;
-    let mut login_view = tui::login::LoginView::make(client)?;
-    match tui::show(&mut login_view, &mut terminal, None)? {
-        Some(auth_response) => {
-            let session = session::make(
-                auth_response.access_token,
-                auth_response.id_token,
-            )?;
-            session::save(&session)?;
-            Ok(session)
-        }
-        None => Err(Error::UserError("Login aborted")),
-    }
-}
 
 pub fn get_entry_by_id(
     inbox: InboxListing,
@@ -47,8 +23,7 @@ pub fn get_entry_by_id(
 }
 
 fn get_attachment_body(
-    client: &impl Client,
-    session: &session::Session,
+    client: &mut impl Client,
     item: &InboxItem,
     details: &ItemDetails,
     attachment_num: u32,
@@ -62,21 +37,23 @@ fn get_attachment_body(
         (None, None) => Err(Error::AppError(
             "Attachment has no attachment key nor inline body",
         )),
-        (Some(key), _) => client.download_attachment(session, &item.key, key),
-        (_, Some(body)) => Ok(Bytes::copy_from_slice(body.as_bytes())),
+        (Some(key), _) => {
+            Ok(client.download_attachment(&item.key, key)?)
+        },
+        (_, Some(body)) => {
+            Ok(Bytes::copy_from_slice(body.as_bytes()))
+        },
     }
 }
 
 pub fn download_attachment(
-    client: &impl Client,
-    session: &session::Session,
+    client: &mut impl Client,
     item: &InboxItem,
     attachment_num: u32,
     download_dir: PathBuf,
 ) -> Result<PathBuf, Error> {
-    let details = client.get_item_details(session, &item.key)?;
-    let file =
-        get_attachment_body(client, session, item, &details, attachment_num)?;
+    let details = client.get_item_details(&item.key)?;
+    let file = get_attachment_body(client, item, &details, attachment_num)?;
     let filename = details.attachment_name(attachment_num as usize)?;
     let full_path = Path::new(&download_dir).join(filename);
     File::create_new(&full_path)?.write_all(&file)?;
@@ -84,14 +61,12 @@ pub fn download_attachment(
 }
 
 pub fn open_attachment(
-    client: &impl Client,
-    session: &session::Session,
+    client: &mut impl Client,
     item: &InboxItem,
     attachment_num: u32,
 ) -> Result<(), Error> {
     let tmp_dir = std::env::temp_dir();
-    let path =
-        download_attachment(client, session, item, attachment_num, tmp_dir)?;
+    let path = download_attachment(client, item, attachment_num, tmp_dir)?;
     opener::open(path)?;
     Ok(())
 }

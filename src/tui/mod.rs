@@ -9,8 +9,9 @@ use ratatui::{
     Frame,
 };
 use terminal::LoadedTerminal;
+use thiserror::Error;
 
-use crate::{client::session::Session, error::Error};
+use crate::client::session::Session;
 
 pub mod inbox;
 pub mod inbox_item;
@@ -18,6 +19,21 @@ mod keymap;
 pub mod login;
 pub mod qr;
 pub mod terminal;
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("QR code generation failed: {0}")]
+    QRError(#[from] qrcode::types::QrError),
+
+    #[error("IO error encountered: {0}")]
+    IOError(#[from] std::io::Error),
+
+    #[error("HTTP client error: {0}")]
+    ClientError(#[from] crate::client::Error),
+
+    #[error("app error: {0}")]
+    AppError(&'static str),
+}
 
 pub trait TuiView {
     type ReturnType;

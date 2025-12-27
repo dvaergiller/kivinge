@@ -1,9 +1,11 @@
 use bytes::Bytes;
+use reqwest::blocking::RequestBuilder;
+use serde::de::DeserializeOwned;
 
-use super::Client;
-use crate::client::Session;
-use crate::error::Error;
+use super::session::{self, Session};
+use super::{Error, Client};
 use crate::model::{auth::*, content::*, Config};
+use crate::tui;
 
 const API_URL: &str = "https://app.api.kivra.com";
 const ACCOUNTS_URL: &str = "https://accounts.kivra.com";
@@ -11,6 +13,76 @@ const ACCOUNTS_URL: &str = "https://accounts.kivra.com";
 #[derive(Default)]
 pub struct KivraClient {
     client: reqwest::blocking::Client,
+    session: Option<Session>,
+}
+
+impl KivraClient {
+    pub fn request<Resp: DeserializeOwned>(
+        &mut self,
+        request: RequestBuilder
+    ) -> Result<Resp, Error> {
+        match self.try_request(request.try_clone().ok_or(Error::CloneError)?) {
+            Ok(response) => {
+                Ok(response)
+            }
+            Err(Error::NoSession) => {
+                self.get_session_or_login()?;
+                self.try_request(request)
+            }
+            Err(error) => {
+                Err(error)
+            }
+        }
+    }
+
+    fn try_request<Resp: DeserializeOwned>(
+        &self,
+        request: RequestBuilder,
+    ) -> Result<Resp, Error> {
+        let session = self.session.as_ref().ok_or(Error::NoSession)?;
+        Ok(request
+           .bearer_auth(&session.access_token)
+           .send()?
+           .error_for_status()?
+           .json()?)
+    }
+
+    pub fn get_or_load_session(&mut self) -> Result<Option<Session>, Error> {
+        if let Some(session) = &self.session {
+            return Ok(Some(session.clone()));
+        }
+
+        let opt_session = session::try_load()?;
+        self.session = opt_session.clone();
+        Ok(opt_session)
+    }
+
+    pub fn get_session_or_login(&mut self) -> Result<Session, Error> {
+        if let Some(session) = self.get_or_load_session()? {
+            return Ok(session);
+        }
+
+        let to_dyn_boxed = |error: tui::Error| -> Box<dyn std::error::Error> {
+            Box::new(error)
+        };
+
+        let mut terminal = tui::terminal::load().map_err(to_dyn_boxed)?;
+        let mut login_view = tui::login::LoginView::make(self)
+            .map_err(to_dyn_boxed)?;
+        match tui::show(&mut login_view, &mut terminal, None)
+            .map_err(to_dyn_boxed)? {
+            Some(auth_response) => {
+                let session = session::make(
+                    auth_response.access_token,
+                    auth_response.id_token,
+                )?;
+                session::save(&session)?;
+                self.session = Some(session.clone());
+                Ok(session)
+            }
+            None => Err(Error::LoginAborted),
+        }
+    }
 }
 
 impl Client for KivraClient {
@@ -90,39 +162,37 @@ impl Client for KivraClient {
         Ok(resp.json()?)
     }
 
-    fn revoke_auth_token(&self, session: &Session) -> Result<(), Error> {
-        self.client
-            .post(format!("{API_URL}/v2/oauth2/token/revoke"))
-            .json(&RevokeRequest {
-                token: session.access_token.clone(),
-                token_type_hint: "access_token".to_string(),
-            })
-            .send()?
-            .error_for_status()?;
+    fn revoke_auth_token(&mut self) -> Result<(), Error> {
+        if let Some(session) = self.get_or_load_session()? {
+            self
+                .client
+                .post(format!("{API_URL}/v2/oauth2/token/revoke"))
+                .json(&RevokeRequest {
+                    token: session.access_token.clone(),
+                    token_type_hint: "access_token".to_string(),
+                })
+                .send()?
+                .error_for_status()?;
+        }
         Ok(())
     }
 
-    fn get_inbox_listing(
-        &self,
-        session: &Session,
-    ) -> Result<InboxListing, Error> {
+    fn get_inbox_listing(&mut self) -> Result<InboxListing, Error> {
+        let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let listing = self
+        let request = self
             .client
             .get(format!("{API_URL}/v3/user/{user_id}/content"))
-            .query(&[("listing", "all")])
-            .bearer_auth(&session.access_token)
-            .send()?
-            .error_for_status()?
-            .json()?;
+            .query(&[("listing", "all")]);
+        let listing: InboxListing = self.request(request)?;
         Ok(InboxListing::from_content_specs(listing))
     }
 
     fn get_item_details(
-        &self,
-        session: &Session,
+        &mut self,
         item_key: &str,
     ) -> Result<ItemDetails, Error> {
+        let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
         let details = self
             .client
@@ -134,11 +204,8 @@ impl Client for KivraClient {
         Ok(details)
     }
 
-    fn mark_as_read(
-        &self,
-        session: &Session,
-        item_key: &str,
-    ) -> Result<(), Error> {
+    fn mark_as_read(&mut self, item_key: &str) -> Result<(), Error> {
+        let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
         self.client
             .post(format!(
@@ -152,11 +219,11 @@ impl Client for KivraClient {
     }
 
     fn download_attachment(
-        &self,
-        session: &Session,
+        &mut self,
         item_key: &str,
         attachment_key: &str,
     ) -> Result<Bytes, Error> {
+        let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
         let attachment = self
             .client
