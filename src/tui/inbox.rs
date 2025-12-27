@@ -1,7 +1,7 @@
 use chrono::{Local, TimeZone};
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Modifier, Style, Stylize},
+    style::{Color, Modifier, Style, Stylize},
     widgets::{Block, Cell, Row, Table, TableState},
     Frame,
 };
@@ -95,7 +95,7 @@ fn inbox_widget(inbox: &InboxListing) -> Table<'static> {
     Table::new(rows, widths)
         .column_spacing(1)
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
-        .block(Block::bordered())
+        .block(Block::bordered().fg(Color::Green))
 }
 
 fn inbox_row(entry: &InboxEntry) -> Row<'static> {

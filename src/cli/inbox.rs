@@ -19,5 +19,5 @@ pub fn format(inbox: InboxListing) -> String {
             &local_datetime,
         ]);
     }
-    builder.build().with(Style::rounded()).to_string()
+    builder.build().with(Style::modern()).to_string()
 }

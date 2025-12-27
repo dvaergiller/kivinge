@@ -95,7 +95,9 @@ fn render_main(frame: &mut Frame, session: Option<&Session>) -> Rect {
     let user_name =
         session.map(|s| s.user_info.name.clone()).unwrap_or_default();
     let session_header =
-        Paragraph::new(user_name).bg(ratatui::style::Color::Green);
+        Paragraph::new(user_name)
+        .bg(ratatui::style::Color::Green)
+        .right_aligned();
     frame.render_widget(session_header, header[1]);
     layout[1]
 }

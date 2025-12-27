@@ -1,6 +1,6 @@
 use crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Modifier, Style, Stylize};
+use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::widgets::{
     Block, Borders, List, ListDirection, ListState, Paragraph,
 };
@@ -141,7 +141,8 @@ fn render_widget(
         })
         .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
         .title("Sender:")
-        .title_style(Style::new().bold());
+        .title_style(Style::new().bold())
+        .fg(Color::Green);
     let sender_text = indent(2, &item.sender_name);
     let sender_widget = Paragraph::new(sender_text).block(sender_block);
     frame.render_widget(sender_widget, top_layout[0]);
@@ -149,7 +150,8 @@ fn render_widget(
     let status_block = Block::new()
         .borders(Borders::TOP | Borders::RIGHT)
         .title("Status:")
-        .title_style(Style::new().bold());
+        .title_style(Style::new().bold())
+        .fg(Color::Green);
     let status_text =
         if item.status == Status::Read { "Read" } else { "Unread" };
     let status_widget =
@@ -159,7 +161,8 @@ fn render_widget(
     let created_block = Block::new()
         .borders(Borders::TOP | Borders::RIGHT)
         .title("Created at:")
-        .title_style(Style::new().bold());
+        .title_style(Style::new().bold())
+        .fg(Color::Green);
     let created_text = indent(2, item.created_at.format("%Y-%m-%d %H:%M"));
     let created_widget = Paragraph::new(created_text).block(created_block);
     frame.render_widget(created_widget, top_layout[2]);
@@ -172,7 +175,8 @@ fn render_widget(
         })
         .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
         .title("Subject:")
-        .title_style(Style::new().bold());
+        .title_style(Style::new().bold())
+        .fg(Color::Green);
     let subject_text = indent(2, &item.subject);
     let subject_widget = Paragraph::new(subject_text).block(subject_block);
     frame.render_widget(subject_widget, main_layout[1]);
@@ -185,7 +189,8 @@ fn render_widget(
         })
         .borders(Borders::ALL)
         .title("Attachments:")
-        .title_style(Style::new().bold());
+        .title_style(Style::new().bold())
+        .fg(Color::Green);
     let attachments: Vec<String> = (0..(details.parts.len()))
         .map(|i| details.attachment_name(i).unwrap())
         .collect();
