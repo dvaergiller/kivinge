@@ -7,8 +7,6 @@ use std::{
     panic,
 };
 
-use crate::client::Client;
-
 use super::Error;
 
 #[derive(Debug)]

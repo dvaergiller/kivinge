@@ -80,6 +80,13 @@ pub trait Client {
         item_key: &str,
         attachment_key: &str,
     ) -> Result<Bytes, Error>;
+
+    fn get_session(&self) -> Option<Session>;
+
+
+    fn get_or_load_session(&mut self) -> Result<Option<Session>, Error>;
+
+    fn get_session_or_login(&mut self) -> Result<Session, Error>;
 }
 
 impl Client for Box<dyn Client> {
@@ -136,5 +143,17 @@ impl Client for Box<dyn Client> {
         attachment_key: &str,
     ) -> Result<Bytes, Error> {
         (**self).download_attachment(item_key, attachment_key)
+    }
+
+    fn get_session(&self) -> Option<Session> {
+        (**self).get_session()
+    }
+
+    fn get_or_load_session(&mut self) -> Result<Option<Session>, Error> {
+        (**self).get_or_load_session()
+    }
+
+    fn get_session_or_login(&mut self) -> Result<Session, Error> {
+        (**self).get_session_or_login()
     }
 }

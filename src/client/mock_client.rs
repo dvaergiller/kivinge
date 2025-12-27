@@ -82,4 +82,16 @@ impl Client for MockClient {
     ) -> Result<Bytes, Error> {
         Ok(Bytes::from_static(b"tjena"))
     }
+
+    fn get_session(&self) -> Option<Session> {
+        None
+    }
+
+    fn get_or_load_session(&mut self) -> Result<Option<Session>, Error> {
+        Ok(None)
+    }
+
+    fn get_session_or_login(&mut self) -> Result<Session, Error> {
+        Err(Error::NoSession)
+    }
 }

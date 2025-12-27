@@ -2,9 +2,6 @@ use thiserror;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("session manager error: {0}")]
-    SessionManagerError(#[from] super::client::session_manager::Error),
-
     #[error("session error: {0}")]
     SessionError(#[from] super::client::session::Error),
 

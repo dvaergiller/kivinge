@@ -1,6 +1,5 @@
 use bytes::Bytes;
-use reqwest::blocking::RequestBuilder;
-use serde::de::DeserializeOwned;
+use reqwest::blocking::{RequestBuilder, Response};
 
 use super::session::{self, Session};
 use super::{Error, Client};
@@ -17,17 +16,21 @@ pub struct KivraClient {
 }
 
 impl KivraClient {
-    pub fn request<Resp: DeserializeOwned>(
+    pub fn with_session(
         &mut self,
         request: RequestBuilder
-    ) -> Result<Resp, Error> {
-        match self.try_request(request.try_clone().ok_or(Error::CloneError)?) {
+    ) -> Result<Response, Error> {
+        match self.try_with_session(request.try_clone().ok_or(Error::CloneError)?) {
             Ok(response) => {
                 Ok(response)
             }
             Err(Error::NoSession) => {
                 self.get_session_or_login()?;
-                self.try_request(request)
+                self.try_with_session(request)
+            }
+            Err(Error::SessionExpired) => {
+                self.get_session_or_login()?;
+                self.try_with_session(request)
             }
             Err(error) => {
                 Err(error)
@@ -35,53 +38,15 @@ impl KivraClient {
         }
     }
 
-    fn try_request<Resp: DeserializeOwned>(
+    fn try_with_session(
         &self,
         request: RequestBuilder,
-    ) -> Result<Resp, Error> {
+    ) -> Result<Response, Error> {
         let session = self.session.as_ref().ok_or(Error::NoSession)?;
         Ok(request
            .bearer_auth(&session.access_token)
            .send()?
-           .error_for_status()?
-           .json()?)
-    }
-
-    pub fn get_or_load_session(&mut self) -> Result<Option<Session>, Error> {
-        if let Some(session) = &self.session {
-            return Ok(Some(session.clone()));
-        }
-
-        let opt_session = session::try_load()?;
-        self.session = opt_session.clone();
-        Ok(opt_session)
-    }
-
-    pub fn get_session_or_login(&mut self) -> Result<Session, Error> {
-        if let Some(session) = self.get_or_load_session()? {
-            return Ok(session);
-        }
-
-        let to_dyn_boxed = |error: tui::Error| -> Box<dyn std::error::Error> {
-            Box::new(error)
-        };
-
-        let mut terminal = tui::terminal::load().map_err(to_dyn_boxed)?;
-        let mut login_view = tui::login::LoginView::make(self)
-            .map_err(to_dyn_boxed)?;
-        match tui::show(&mut login_view, &mut terminal, None)
-            .map_err(to_dyn_boxed)? {
-            Some(auth_response) => {
-                let session = session::make(
-                    auth_response.access_token,
-                    auth_response.id_token,
-                )?;
-                session::save(&session)?;
-                self.session = Some(session.clone());
-                Ok(session)
-            }
-            None => Err(Error::LoginAborted),
-        }
+           .error_for_status()?)
     }
 }
 
@@ -180,11 +145,13 @@ impl Client for KivraClient {
     fn get_inbox_listing(&mut self) -> Result<InboxListing, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let request = self
-            .client
-            .get(format!("{API_URL}/v3/user/{user_id}/content"))
-            .query(&[("listing", "all")]);
-        let listing: InboxListing = self.request(request)?;
+        let listing = self.with_session(
+            self
+                .client
+                .get(format!("{API_URL}/v3/user/{user_id}/content"))
+                .query(&[("listing", "all")])
+        )?
+        .json()?;
         Ok(InboxListing::from_content_specs(listing))
     }
 
@@ -194,27 +161,21 @@ impl Client for KivraClient {
     ) -> Result<ItemDetails, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let details = self
-            .client
-            .get(format!("{API_URL}/v3/user/{user_id}/content/{item_key}"))
-            .bearer_auth(&session.access_token)
-            .send()?
-            .error_for_status()?
-            .json()?;
+        let url = format!("{API_URL}/v3/user/{user_id}/content/{item_key}");
+        let details = self.with_session(self.client.get(url))?.json()?;
         Ok(details)
     }
 
     fn mark_as_read(&mut self, item_key: &str) -> Result<(), Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        self.client
-            .post(format!(
-                "{API_URL}/v2/user/{user_id}/content/{item_key}/view"
-            ))
-            .header("content-type", "application/json")
-            .bearer_auth(&session.access_token)
-            .send()?
-            .error_for_status()?;
+        self.with_session(
+            self.client
+                .post(format!(
+                    "{API_URL}/v2/user/{user_id}/content/{item_key}/view"
+                ))
+                .header("content-type", "application/json")
+        )?;
         Ok(())
     }
 
@@ -225,15 +186,51 @@ impl Client for KivraClient {
     ) -> Result<Bytes, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let attachment = self
-            .client
-            .get(format!(
-                "{API_URL}/v1/user/{user_id}/content/{item_key}/file/{attachment_key}/raw"
-            ))
-            .bearer_auth(&session.access_token)
-            .send()?
-            .error_for_status()?
-            .bytes()?;
+        let url = format!(
+            "{API_URL}/v1/user/{user_id}/content/{item_key}/file/{attachment_key}/raw"
+        );
+        let attachment = self.with_session(self.client.get(url))?.bytes()?;
         Ok(attachment)
+    }
+
+    fn get_session(&self) -> Option<Session> {
+        self.session.clone()
+    }
+
+    fn get_or_load_session(&mut self) -> Result<Option<Session>, Error> {
+        if let Some(session) = &self.session {
+            return Ok(Some(session.clone()));
+        }
+
+        let opt_session = session::try_load()?;
+        self.session = opt_session.clone();
+        Ok(opt_session)
+    }
+
+    fn get_session_or_login(&mut self) -> Result<Session, Error> {
+        if let Some(session) = self.get_or_load_session()? {
+            return Ok(session);
+        }
+
+        let to_dyn_boxed = |error: tui::Error| -> Box<dyn std::error::Error> {
+            Box::new(error)
+        };
+
+        let mut terminal = tui::terminal::load().map_err(to_dyn_boxed)?;
+        let mut login_view = tui::login::LoginView::make(self)
+            .map_err(to_dyn_boxed)?;
+        match tui::show(&mut login_view, &mut terminal, None)
+            .map_err(to_dyn_boxed)? {
+            Some(auth_response) => {
+                let session = session::make(
+                    auth_response.access_token,
+                    auth_response.id_token,
+                )?;
+                session::save(&session)?;
+                self.session = Some(session.clone());
+                Ok(session)
+            }
+            None => Err(Error::LoginAborted),
+        }
     }
 }

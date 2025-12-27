@@ -11,7 +11,7 @@ use ratatui::{
 use terminal::LoadedTerminal;
 use thiserror::Error;
 
-use crate::client::session::Session;
+use crate::client::session::UserInfo;
 
 pub mod inbox;
 pub mod inbox_item;
@@ -60,13 +60,13 @@ pub enum Event {
 pub fn show<Ret>(
     view: &mut impl TuiView<ReturnType = Ret>,
     terminal: &mut LoadedTerminal,
-    session: Option<&Session>,
+    user_info: Option<UserInfo>,
 ) -> Result<Ret, Error> {
     let mut command = view.update(Event::Init)?;
 
     loop {
         let draw = |frame: &mut Frame| {
-            let subview_rect = render_main(frame, session);
+            let subview_rect = render_main(frame, user_info.as_ref());
             view.render(frame, subview_rect);
         };
         terminal.draw(draw)?;
@@ -93,7 +93,7 @@ pub fn show<Ret>(
     }
 }
 
-fn render_main(frame: &mut Frame, session: Option<&Session>) -> Rect {
+fn render_main(frame: &mut Frame, user_info: Option<&UserInfo>) -> Rect {
     let layout = Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints(vec![Constraint::Length(1), Constraint::Fill(1)])
@@ -111,8 +111,7 @@ fn render_main(frame: &mut Frame, session: Option<&Session>) -> Rect {
         .bg(ratatui::style::Color::Green);
     frame.render_widget(title, header[0]);
 
-    let user_name =
-        session.map(|s| s.user_info.name.clone()).unwrap_or_default();
+    let user_name = user_info.map(|i| i.name.clone()).unwrap_or_default();
     let session_header = Paragraph::new(user_name)
         .fg(ratatui::style::Color::Black)
         .bg(ratatui::style::Color::Green)
