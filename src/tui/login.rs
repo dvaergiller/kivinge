@@ -1,9 +1,10 @@
 use crossterm::event::{Event, KeyCode, poll, read};
 use std::time::Duration;
 
-use crate::kivra::{model, qr, request};
+use crate::kivra::{model, request};
 use crate::terminal::{self, prelude, widgets, LoadedTerminal};
-use crate::kivra::error::Error;
+use crate::error::Error;
+use super::qr;
 
 struct State {
     qr_code: String,

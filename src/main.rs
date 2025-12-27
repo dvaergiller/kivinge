@@ -1,7 +1,7 @@
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{self, shells::{Bash, PowerShell, Zsh}, Generator};
-use kivinge::kivra::{error::Error, request, session};
-use kivinge::{terminal, view};
+use kivinge::kivra::{request, session};
+use kivinge::{error::Error, terminal, cli, tui};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -51,30 +51,29 @@ fn generate_completions<G: Generator>(gen: G) {
 fn run(cli_args: CliArgs) -> Result<(), Error> {
     let client = request::client();
     match cli_args.command {
-        Command::Completions { shell: s } => {
-            match s {
-                CompletionsShell::Bash =>
-                    generate_completions(Bash),
-                CompletionsShell::PowerShell =>
-                    generate_completions(PowerShell),
-                CompletionsShell::Zsh =>
-                    generate_completions(Zsh),
-            };
-            Ok(())
-        }
-
         Command::Login if cli_args.preview => {
             let mut terminal = terminal::load()?;
-            view::login::test_render(&mut terminal)
+            tui::login::test_render(&mut terminal)
         }
+
+        Command::List if cli_args.preview => {
+            let mut terminal = terminal::load()?;
+            tui::login::test_render(&mut terminal)
+        }
+
+        Command::Completions { shell: CompletionsShell::Bash } =>
+            Ok(generate_completions(Bash)),
+        Command::Completions { shell: CompletionsShell::PowerShell } =>
+            Ok(generate_completions(PowerShell)),
+        Command::Completions { shell: CompletionsShell::Zsh } =>
+            Ok(generate_completions(Zsh)),
+
         Command::Login => load_session_or_login(&client).and(Ok(())),
 
         Command::List => {
             let session = load_session_or_login(&client)?;
             let inbox = request::get_inbox_listing(&client, &session)?;
-            for entry in inbox {
-                println!("{} - {}", entry.sender_name, entry.subject);
-            }
+            cli::inbox::print(&inbox)?;
             Ok(())
         }
 
@@ -94,7 +93,7 @@ fn load_session_or_login(client: &request::Client) -> Result<session::Session, E
     }
 
     let mut terminal = terminal::load()?;
-    match view::login::show(&mut terminal, client)? {
+    match tui::login::show(&mut terminal, client)? {
         Some(auth_response) => {
             let session = session::make(auth_response.access_token, auth_response.id_token)?;
             session::save(&session)?;

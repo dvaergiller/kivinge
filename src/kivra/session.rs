@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::path::PathBuf;
 
-use super::error::Error;
+use crate::error::Error;
 use super::model::UserId;
 
 #[derive(Clone, Deserialize, Debug)]

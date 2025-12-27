@@ -15,7 +15,7 @@ pub enum Error {
     RandError(#[from] rand::Error),
 
     #[error("QR code generation failed - {0}")]
-    QRError(#[from] super::qr::Error),
+    QRError(#[from] super::tui::qr::Error),
 
     #[error("IO error encountered - {0}")]
     IOError(#[from] std::io::Error),

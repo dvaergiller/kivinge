@@ -1,4 +1,4 @@
-use super::kivra::error::Error;
+use super::error::Error;
 use crossterm::terminal;
 use crossterm::ExecutableCommand;
 use ratatui::prelude::*;

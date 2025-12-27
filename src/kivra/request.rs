@@ -1,4 +1,4 @@
-use super::error::Error;
+use crate::error::Error;
 use super::model::*;
 use super::session::Session;
 
