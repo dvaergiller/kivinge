@@ -16,6 +16,7 @@ pub struct Config {
 }
 
 pub type CodeVerifier = Vec<u8>;
+pub type AuthCode = String;
 
 #[derive(Serialize)]
 pub struct AuthRequest {
@@ -32,7 +33,7 @@ pub struct AuthResponse {
     pub auto_start_token: String,
     pub qr_data: Vec<String>,
     pub qr_code: String,
-    pub code: String,
+    pub code: AuthCode,
     pub next_poll_url: String,
 }
 

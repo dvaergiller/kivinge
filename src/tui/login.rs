@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use super::qr;
 use crate::error::Error;
-use crate::kivra::{model, request};
+use crate::kivra::{client, model};
 use crate::terminal::{self, prelude, widgets, LoadedTerminal};
 
 struct State {
@@ -12,11 +12,11 @@ struct State {
     retry_after: u32,
 }
 
-pub fn show(terminal: &mut terminal::LoadedTerminal, client: &request::Client) ->
+pub fn show(terminal: &mut terminal::LoadedTerminal, client: &impl client::Client) ->
     Result<Option<model::AuthTokenResponse>, Error>
 {
-    let config = request::get_config(client)?;
-    let (verifier, auth_resp) = request::start_auth(client, &config)?;
+    let config = client.get_config()?;
+    let (verifier, auth_resp) = client.start_auth(&config)?;
 
     let mut state = State {
         qr_code: auth_resp.qr_code,
@@ -30,14 +30,14 @@ pub fn show(terminal: &mut terminal::LoadedTerminal, client: &request::Client) -
         if poll(Duration::from_secs(state.retry_after.into()))? {
             match read()? {
                 Event::Key(key) if key.code == KeyCode::Char('q') => {
-                    request::abort_auth(client, &state.next_poll_url)?;
+                    client.abort_auth(&state.next_poll_url)?;
                     return Ok(None);
                 }
                 _ => (),
             }
         }
 
-        let check = request::check_auth(client, &state.next_poll_url)?;
+        let check = client.check_auth(&state.next_poll_url)?;
         match check.ssn {
             None => {
                 state.qr_code = check.qr_code;
@@ -45,8 +45,7 @@ pub fn show(terminal: &mut terminal::LoadedTerminal, client: &request::Client) -
                 state.retry_after = check.retry_after.unwrap_or(state.retry_after);
             }
             Some(_) => {
-                return request::get_auth_token(client, &config, auth_resp.code, verifier)
-                    .map(Some);
+                return client.get_auth_token(&config, auth_resp.code, verifier).map(Some);
             }
         }
     }

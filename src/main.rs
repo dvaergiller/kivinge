@@ -7,7 +7,7 @@ use clap_complete::{
     shells::{Bash, PowerShell, Zsh},
     Generator,
 };
-use kivinge::kivra::{request, model, session};
+use kivinge::kivra::{client::{self, Client}, model, session};
 use kivinge::{cli, error::Error, terminal, tui};
 
 #[derive(Parser, Debug)]
@@ -60,7 +60,7 @@ fn generate_completions<G: Generator>(gen: G) {
 }
 
 fn run(cli_args: CliArgs) -> Result<(), Error> {
-    let client = request::client();
+    let client = client::KivraClient::new();
     match cli_args.command {
         _ if cli_args.preview =>
             run_preview(cli_args),
@@ -76,7 +76,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
 
         Command::List => {
             let session = load_session_or_login(&client)?;
-            let inbox = request::get_inbox_listing(&client, &session)?;
+            let inbox = client.get_inbox_listing(&session)?;
             cli::inbox::print(&inbox)?;
             Ok(())
         }
@@ -89,7 +89,7 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
         Command::Logout => {
             let session =
                 session::try_load()?.ok_or(Error::AppError("No session found".to_string()))?;
-            request::revoke_auth_token(&client, session)?;
+            client.revoke_auth_token(&session)?;
             session::delete_saved()
         }
     }
@@ -131,7 +131,7 @@ fn run_preview(cli_args: CliArgs) -> Result<(), Error> {
     }
 }
 
-fn load_session_or_login(client: &request::Client) -> Result<session::Session, Error> {
+fn load_session_or_login(client: &impl Client) -> Result<session::Session, Error> {
     let loaded = session::try_load()?;
     if let Some(session) = loaded {
         return Ok(session);

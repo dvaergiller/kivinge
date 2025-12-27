@@ -1,3 +1,3 @@
 pub mod model;
-pub mod request;
 pub mod session;
+pub mod client;
