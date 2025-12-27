@@ -91,8 +91,7 @@ pub trait Client {
         if let Some(session) = opt_session {
             self.set_session(session.clone());
             Ok(Some(session.clone()))
-        }
-        else {
+        } else {
             Ok(None)
         }
     }
@@ -100,8 +99,7 @@ pub trait Client {
     fn get_session_or_login(&mut self) -> Result<Session, Error> {
         if let Some(session) = self.get_or_load_session()? {
             Ok(session)
-        }
-        else {
+        } else {
             self.login()
         }
     }

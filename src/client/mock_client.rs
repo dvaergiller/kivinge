@@ -90,12 +90,9 @@ impl Client for MockClient {
         None
     }
 
-    fn set_session(&mut self, _: Session) {
-        return;
-    }
+    fn set_session(&mut self, _: Session) {}
 
     fn login(&mut self) -> Result<Session, Error> {
         Err(Error::NoSession)
     }
 }
-

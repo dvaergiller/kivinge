@@ -54,8 +54,7 @@ impl KivraClient {
         request: RequestBuilder,
     ) -> Result<Response, Error> {
         let req_clone = request.try_clone().ok_or(Error::CloneError)?;
-        match self.try_with_session(req_clone)
-        {
+        match self.try_with_session(req_clone) {
             Ok(response) => Ok(response),
             Err(Error::NoSession) => {
                 self.get_session_or_login()?;
@@ -74,15 +73,13 @@ impl KivraClient {
         request: RequestBuilder,
     ) -> Result<Response, Error> {
         let session = self.session.as_ref().ok_or(Error::NoSession)?;
-        self.send(request.bearer_auth(&session.access_token))
-            .map_err(|err| {
-                if err.status() == Some(reqwest::StatusCode::UNAUTHORIZED) {
-                    Error::SessionExpired
-                }
-                else {
-                    err.into()
-                }
-            })
+        self.send(request.bearer_auth(&session.access_token)).map_err(|err| {
+            if err.status() == Some(reqwest::StatusCode::UNAUTHORIZED) {
+                Error::SessionExpired
+            } else {
+                err.into()
+            }
+        })
     }
 }
 
@@ -143,10 +140,9 @@ impl Client for KivraClient {
         };
 
         Ok(post!(self, "{API_URL}/v2/oauth2/token")
-           .json(&token_request)
-           .try_send()?
-           .json()?
-        )
+            .json(&token_request)
+            .try_send()?
+            .json()?)
     }
 
     #[instrument(skip(self))]
@@ -167,8 +163,7 @@ impl Client for KivraClient {
     fn get_inbox_listing(&mut self) -> Result<InboxListing, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let request =
-            get!(self, "{API_URL}/v3/user/{user_id}/content")
+        let request = get!(self, "{API_URL}/v3/user/{user_id}/content")
             .query(&[("listing", "all")]);
         let listing = self.auth_request(request)?.json()?;
         Ok(InboxListing::from_content_specs(listing))
@@ -191,7 +186,7 @@ impl Client for KivraClient {
         let user_id = &session.user_info.kivra_user_id;
         let req =
             post!(self, "{API_URL}/v2/user/{user_id}/content/{item_key}/view")
-            .header("content-type", "application/json");
+                .header("content-type", "application/json");
         Ok(self.auth_request(req)?.json()?)
     }
 
@@ -226,10 +221,10 @@ impl Client for KivraClient {
         };
 
         let mut terminal = tui::terminal::load().map_err(to_dyn_boxed)?;
-        let mut view = tui::login::LoginView::make(self).map_err(to_dyn_boxed)?;
+        let mut view =
+            tui::login::LoginView::make(self).map_err(to_dyn_boxed)?;
 
-        match tui::show(&mut view, &mut terminal, None).map_err(to_dyn_boxed)?
-        {
+        match tui::show(&mut view, &mut terminal, None).map_err(to_dyn_boxed)? {
             Some(auth_response) => {
                 let session = session::make(
                     auth_response.access_token,

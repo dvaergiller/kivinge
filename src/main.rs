@@ -5,7 +5,11 @@ use clap_complete::{
     Generator,
 };
 use std::path::PathBuf;
-use tracing_subscriber::{fmt::{self, format::FmtSpan}, EnvFilter, prelude::*};
+use tracing_subscriber::{
+    fmt::{self, format::FmtSpan},
+    prelude::*,
+    EnvFilter,
+};
 
 use kivinge::{
     cli,
