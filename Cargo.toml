@@ -13,7 +13,8 @@ name = "kivinge"
 
 [dependencies]
 base64 = { version = "0.22.1", default-features = false }
-clap = { version = "4.5.4", features = ["derive"] }
+clap = { version = "4.5.15", features = ["cargo", "derive"] }
+clap_complete = "4.5.16"
 crossterm = { version = "0.27.0", default-features = false }
 dirs = "5.0.1"
 pkce = "0.2.0"

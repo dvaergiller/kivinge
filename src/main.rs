@@ -1,5 +1,5 @@
-use clap::{Parser, Subcommand};
-
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap_complete::{self, shells::{Bash, PowerShell, Zsh}, Generator};
 use kivinge::kivra::{error::Error, request, session};
 use kivinge::{terminal, view};
 
@@ -15,9 +15,24 @@ struct CliArgs {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+    #[command(about = "Generate shell completion script")]
+    Completions {
+        #[arg(value_enum)]
+        shell: CompletionsShell,
+    },
+    #[command(about = "Log in to Kivra")]
     Login,
+    #[command(about = "List all items in the inbox")]
     List,
+    #[command(about = "Log out from Kivra")]
     Logout,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+enum CompletionsShell {
+    Bash,
+    PowerShell,
+    Zsh,
 }
 
 fn main() {
@@ -28,11 +43,30 @@ fn main() {
     }
 }
 
+fn generate_completions<G: Generator>(gen: G) {
+    let mut command = CliArgs::command();
+    clap_complete::generate(gen, &mut command, "kivinge", &mut std::io::stdout());
+}
+
 fn run(cli_args: CliArgs) -> Result<(), Error> {
-    let mut terminal = terminal::load()?;
     let client = request::client();
     match cli_args.command {
-        Command::Login if cli_args.preview => view::login::test_render(&mut terminal),
+        Command::Completions { shell: s } => {
+            match s {
+                CompletionsShell::Bash =>
+                    generate_completions(Bash),
+                CompletionsShell::PowerShell =>
+                    generate_completions(PowerShell),
+                CompletionsShell::Zsh =>
+                    generate_completions(Zsh),
+            };
+            Ok(())
+        }
+
+        Command::Login if cli_args.preview => {
+            let mut terminal = terminal::load()?;
+            view::login::test_render(&mut terminal)
+        }
         Command::Login => load_session_or_login(&client).and(Ok(())),
 
         Command::List => {
