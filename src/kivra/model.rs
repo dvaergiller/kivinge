@@ -65,6 +65,12 @@ pub struct AuthTokenResponse {
     pub token_type: String,
 }
 
+#[derive(Serialize, Debug)]
+pub struct RevokeRequest {
+    pub token: String,
+    pub token_type_hint: String
+}
+
 pub type ContentKey = String;
 pub type SenderKey = String;
 pub type AgreementKey = String;

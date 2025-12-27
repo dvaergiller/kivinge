@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::PathBuf;
 use std::fs::File;
 
 use super::error::Error;
@@ -50,11 +50,18 @@ impl Into<StoredSession> for Session {
     }
 }
 
-const DEFAULT_SESSION_PATH: &str = "~/.local/kivra_session";
+fn default_session_path() -> Result<PathBuf, Error> {
+    let mut path = dirs::data_local_dir()
+        .ok_or(Error::AppError(
+            "Failed to determine data local dir for saving session data"
+                .to_string()))?;
+    path.push("kivinge.session");
+    Ok(path)
+}
 
 pub fn try_load() -> Result<Option<Session>, Error> {
-    let session_path = Path::new(DEFAULT_SESSION_PATH);
-    if !Path::exists(session_path) {
+    let session_path = default_session_path()?;
+    if !session_path.exists() {
         return Ok(None);
     }
 
@@ -64,11 +71,16 @@ pub fn try_load() -> Result<Option<Session>, Error> {
 }
 
 pub fn save(session: &Session) -> Result<(), Error> {
-    let session_path = Path::new(DEFAULT_SESSION_PATH);
+    let session_path = default_session_path()?;
     let session_file = File::create(session_path)?;
     let stored_session: StoredSession = session.clone().into();
     serde_json::to_writer(session_file, &stored_session)?;
     Ok(())
+}
+
+pub fn delete_saved() -> Result<(), Error> {
+    let session_path = default_session_path()?;
+    Ok(std::fs::remove_file(session_path)?)
 }
 
 pub fn make(access_token: String, id_token: String) -> Result<Session, Error> {
@@ -83,6 +95,5 @@ fn extract_user_info(id_token: &String) -> Result<UserInfo, Error>
         "Malformed JWT returned by server: Too few sections".to_string())
     )?;
     let claims_json = URL_SAFE_NO_PAD.decode(claims_base64)?;
-    println!("{:?}", String::from_utf8(claims_json.clone()));
     Ok(serde_json::from_slice(claims_json.as_slice())?)
 }

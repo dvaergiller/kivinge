@@ -1,4 +1,5 @@
 use super::model::*;
+use super::session::Session;
 use super::error::Error;
 
 pub type Client = reqwest::blocking::Client;
@@ -68,14 +69,26 @@ pub fn get_auth_token(client: &Client,
     Ok(resp.json()?)
 }
 
-pub fn get_inbox_listing(client: &Client,
-                         user_id: &String,
-                         access_token: &String) ->
+pub fn revoke_auth_token(client: &Client, session: Session) ->
+    Result<(), Error>
+{
+    client.post(format!("{API_URL}/v2/oauth2/token/revoke"))
+        .json(&RevokeRequest {
+            token: session.access_token,
+            token_type_hint: "access_token".to_string()
+        })
+        .send()?
+        .error_for_status()?;
+    Ok(())
+}
+
+pub fn get_inbox_listing(client: &Client, session: &Session) ->
     Result<Vec<ContentSpec>, Error>
 {
+    let user_id = &session.user_info.kivra_user_id;
     Ok(client.get(format!("{API_URL}/v3/user/{user_id}/content"))
        .query(&[("listing", "all")])
-       .bearer_auth(access_token)
+       .bearer_auth(&session.access_token)
        .send()?
        .json()?)
 }

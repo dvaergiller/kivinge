@@ -1,30 +1,55 @@
+use clap::{Parser, Subcommand};
 use std::thread::sleep;
 
 use kivinge::kivra::{request, qr, session, model::*, error::Error};
 use kivinge::{terminal, terminal::prelude, terminal::widgets};
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct CliArgs {
+    #[command(subcommand)]
+    command: Command
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    Login,
+    Inbox,
+    Logout,
+}
+
 fn main() {
-    run().unwrap_or_else(|err| println!("{}", err));
+    let cli_args = CliArgs::parse();
+    match run(cli_args) {
+        Ok(()) => (),
+        Err(err) => println!("Error: {err}")
+    }
 }
 
-fn run() -> Result<(), Error> {
+fn run(cli_args: CliArgs) -> Result<(), Error> {
     let client = request::client();
-    let config = request::get_config(&client)?;
-    let mut terminal = terminal::load()?;
-    let session = load_session_or_login(&mut terminal, &client, &config)?;
-    let inbox = request::get_inbox_listing(&client,
-                                           &session.user_info.kivra_user_id,
-                                           &session.access_token)?;
+    match cli_args.command {
+        Command::Login => load_session_or_login(&client).and(Ok(())),
 
-    inbox.iter().for_each(
-        |entry| println!("{}: {}", entry.sender_name, entry.subject));
+        Command::Inbox => {
+            let session = load_session_or_login(&client)?;
+            let inbox = request::get_inbox_listing(&client, &session)?;
+            for entry in inbox {
+                println!("{} - {}", entry.sender_name, entry.subject);
+            }
+            Ok(())
+        },
 
-    Ok(())
+        Command::Logout => {
+            let session = session::try_load()?
+                .ok_or(Error::AppError("No session found".to_string()))?;
+            request::revoke_auth_token(&client, session)?;
+            session::delete_saved()
+        },
+    }
 }
 
-fn load_session_or_login(terminal: &mut terminal::LoadedTerminal,
-                         client: &request::Client,
-                         config: &Config) ->
+fn load_session_or_login(client: &request::Client) ->
     Result<session::Session, Error>
 {
     let loaded = session::try_load()?;
@@ -32,18 +57,18 @@ fn load_session_or_login(terminal: &mut terminal::LoadedTerminal,
         return Ok(session);
     }
 
-    let auth_response = login(terminal, &client, &config)?;
+    let auth_response = login(&client)?;
     let session = session::make(auth_response.access_token,
                                 auth_response.id_token)?;
     session::save(&session)?;
     Ok(session)
 }
 
-fn login(terminal: &mut terminal::LoadedTerminal,
-         client: &request::Client,
-         config: &Config) ->
+fn login(client: &request::Client) ->
     Result<AuthTokenResponse, Error>
 {
+    let config = request::get_config(&client)?;
+    let mut terminal = terminal::load()?;
     let (verifier, auth_resp) = request::start_auth(&client, &config)?;
     let qrcode = qr::encode(&auth_resp.qr_code)?;
 
