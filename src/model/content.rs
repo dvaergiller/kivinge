@@ -51,7 +51,8 @@ impl InboxItem {
             self.sender_name,
             self.subject
         )
-        .replace(' ', "_")
+            .replace(' ', "_")
+            .replace('/', "-")
     }
 }
 
