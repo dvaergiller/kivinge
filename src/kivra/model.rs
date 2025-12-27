@@ -198,5 +198,5 @@ pub struct Attachment {
     pub content_type: String,
     pub size: usize,
     pub key: Option<AttachmentKey>,
-    pub body: Option<Vec<u8>>,
+    pub body: Option<String>,
 }

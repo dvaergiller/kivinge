@@ -189,7 +189,7 @@ fn get_attachment_body(
             "Attachment has no attachment key nor inline body".to_string(),
         )),
         (Some(key), _) => client.download_attachment(session, &entry.item.key, key),
-        (_, Some(body)) => Ok(Bytes::copy_from_slice(body)),
+        (_, Some(body)) => Ok(Bytes::copy_from_slice(body.as_bytes())),
     }
 }
 
