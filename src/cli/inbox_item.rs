@@ -16,7 +16,7 @@ pub fn format(details: ItemDetails) -> Result<String, Error> {
     ];
 
     for i in 0..(details.parts.len()) {
-        output.push(format!("  {}: {}\n", i + 1, details.attachment_name(i)?));
+        output.push(format!("  {}: {}\n", i, details.attachment_name(i)?));
     }
 
     Ok(output.concat())
