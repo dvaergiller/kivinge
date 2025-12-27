@@ -2,22 +2,24 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     prelude,
     style::Color,
-    widgets::Paragraph
+    widgets::Paragraph,
 };
 use std::time::Duration;
 
-const QR_BRANDING: &str = concat!(
-" ▄▄  ▄▄ \n",
-" ██▄█▀  \n",
-" ██▀█▄  \n",
-" ▀▀  ▀▀ \n",
-);
+const QR_BRANDING: &str =
+    concat!(
+        " ▄▄  ▄▄ \n",
+        " ██▄█▀  \n",
+        " ██▀█▄  \n",
+        " ▀▀  ▀▀ \n",
+    );
 
 use super::{keymap::KeyEvent, qr, Command, Error, Event, TuiView};
 use crate::{
     client::{self, Client},
     model::{
-        Config, auth::{AuthCode, AuthTokenResponse}
+        auth::{AuthCode, AuthTokenResponse},
+        Config,
     },
 };
 
@@ -47,7 +49,9 @@ impl<'a, C: Client> LoginView<'a, C> {
         })
     }
 
-    fn check_auth(&mut self) -> Result<Option<AuthTokenResponse>, client::Error> {
+    fn check_auth(
+        &mut self,
+    ) -> Result<Option<AuthTokenResponse>, client::Error> {
         let check = self.client.check_auth(&self.next_poll_url)?;
         match check.ssn {
             None => {
@@ -124,18 +128,14 @@ impl<'a, C: Client> TuiView for LoginView<'a, C> {
             layout[1],
         );
         frame.render_widget(
-            Paragraph::new(qr)
-                .alignment(Alignment::Center),
-            layout[2]
+            Paragraph::new(qr).alignment(Alignment::Center),
+            layout[2],
         );
 
         let branding_height = QR_BRANDING.lines().count() as u16;
-        let branding_width = QR_BRANDING
-            .lines()
-            .next()
-            .unwrap_or_default()
-            .chars()
-            .count() as u16;
+        let branding_width =
+            QR_BRANDING.lines().next().unwrap_or_default().chars().count()
+                as u16;
         let branding_rect = Rect {
             x: layout[2].x + layout[2].width / 2 - branding_width / 2,
             y: layout[2].y + layout[2].height / 2 - branding_height / 2,
@@ -147,7 +147,7 @@ impl<'a, C: Client> TuiView for LoginView<'a, C> {
             Paragraph::new(QR_BRANDING)
                 .alignment(Alignment::Center)
                 .style(Color::Green),
-            branding_rect
+            branding_rect,
         );
 
         frame.render_widget(

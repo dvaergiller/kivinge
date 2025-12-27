@@ -84,14 +84,16 @@ enum CompletionsShell {
 fn main() -> Result<(), Error> {
     let cli_args = CliArgs::parse();
     match maybe_fork(cli_args) {
-        Ok(None) =>
-            Ok(()),
-        Ok(Some(output)) =>
-            Ok(println!("{output}")),
-        Err(Error::ClientError(client::Error::LoginAborted)) =>
-            Ok(println!("Login aborted")),
-        Err(err) =>
-            Err(err),
+        Ok(None) => Ok(()),
+        Ok(Some(output)) => {
+            println!("{output}");
+            Ok(())
+        }
+        Err(Error::ClientError(client::Error::LoginAborted)) => {
+            println!("Login aborted");
+            Ok(())
+        }
+        Err(err) => Err(err),
     }
 }
 
@@ -118,9 +120,10 @@ fn run(cli_args: CliArgs) -> Result<Option<String>, Error> {
     let logpath = dirs::state_dir().unwrap_or(".".into()).join("kivinge.log");
     let logfile = File::options().append(true).create(true).open(logpath)?;
     tracing_subscriber::registry()
-        .with(fmt::layer()
-              .with_writer(logfile.try_clone()?)
-              .with_span_events(FmtSpan::ENTER)
+        .with(
+            fmt::layer()
+                .with_writer(logfile.try_clone()?)
+                .with_span_events(FmtSpan::ENTER),
         )
         .with(EnvFilter::from_env("LOGLEVEL"))
         .init();

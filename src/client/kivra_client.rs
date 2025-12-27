@@ -46,13 +46,9 @@ pub struct KivraClient {
 
 impl KivraClient {
     pub fn new() -> Result<KivraClient, Error> {
-        let client = reqwest::blocking::Client::builder()
-            .use_native_tls()
-            .build()?;
-        Ok(KivraClient {
-            client,
-            session: None,
-        })
+        let client =
+            reqwest::blocking::Client::builder().use_native_tls().build()?;
+        Ok(KivraClient { client, session: None })
     }
 
     pub fn auth_request(
@@ -79,16 +75,13 @@ impl KivraClient {
         request: RequestBuilder,
     ) -> Result<Response, Error> {
         let session = self.session.as_ref().ok_or(Error::NoSession)?;
-        request
-            .bearer_auth(&session.access_token)
-            .try_send()
-            .map_err(|err| {
-                if err.status() == Some(reqwest::StatusCode::UNAUTHORIZED) {
-                    Error::SessionExpired
-                } else {
-                    err.into()
-                }
-            })
+        request.bearer_auth(&session.access_token).try_send().map_err(|err| {
+            if err.status() == Some(reqwest::StatusCode::UNAUTHORIZED) {
+                Error::SessionExpired
+            } else {
+                err.into()
+            }
+        })
     }
 }
 
@@ -177,9 +170,10 @@ impl Client for KivraClient {
     ) -> Result<ItemDetails, Error> {
         let session = self.get_session_or_login()?;
         let user_id = &session.user_info.kivra_user_id;
-        let response = self.auth_request(
-            get!(self, "{API_URL}/v3/user/{user_id}/content/{item_key}")
-        )?;
+        let response = self.auth_request(get!(
+            self,
+            "{API_URL}/v3/user/{user_id}/content/{item_key}"
+        ))?;
         Ok(response.json()?)
     }
 
@@ -188,7 +182,7 @@ impl Client for KivraClient {
         let user_id = &session.user_info.kivra_user_id;
         self.auth_request(
             post!(self, "{API_URL}/v2/user/{user_id}/content/{item_key}/view")
-                .header("content-type", "application/json")
+                .header("content-type", "application/json"),
         )?;
         Ok(())
     }

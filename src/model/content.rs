@@ -128,9 +128,10 @@ impl ItemDetails {
             index,
             self.sender_name,
             self.subject,
-            file_extension)
-           .replace(' ', "-")
-           .replace('/', "-"))
+            file_extension
+        )
+        .replace(' ', "-")
+        .replace('/', "-"))
     }
 }
 
