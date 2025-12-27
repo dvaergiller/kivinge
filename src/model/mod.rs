@@ -16,7 +16,7 @@ pub struct Config {
     pub oauth_response_type: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Date(pub chrono::NaiveDate);
 
 impl<'a> Deserialize<'a> for Date {

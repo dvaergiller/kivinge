@@ -8,6 +8,7 @@ pub enum KeyCommand {
     Select,
     Back,
     Quit,
+    Key(KeyCode),
     Unknown,
 }
 
@@ -33,7 +34,7 @@ pub fn read_key() -> Result<KeyCommand, Error> {
 
             KeyCode::Esc | KeyCode::Char('q') => Ok(KeyCommand::Quit),
 
-            _ => Ok(KeyCommand::Unknown),
+            _ => Ok(KeyCommand::Key(key.code)),
         },
         _ => Ok(KeyCommand::Unknown),
     }

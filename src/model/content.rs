@@ -11,7 +11,7 @@ pub type SenderKey = String;
 pub type AgreementKey = String;
 pub type ContentLabels = BTreeMap<String, bool>;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct InboxItem {
     pub key: ContentKey,
     pub sender: SenderKey,
@@ -20,7 +20,7 @@ pub struct InboxItem {
     // This can be empty. Let's worry about that if we need the field:
     // pub generated_at: DateTime,
     pub subject: String,
-    pub status: String, // Might be an enum later
+    pub status: Status, // Might be an enum later
     pub labels: ContentLabels,
     pub indexed_at: DateTime<Utc>,
     #[serde(default)]
@@ -41,6 +41,13 @@ pub struct InboxItem {
     // Do not know how to decode these yet
     // pub tags: // null
     // pub form: //null
+}
+
+#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all(deserialize="lowercase"))]
+pub enum Status {
+    Unread,
+    Read,
 }
 
 #[derive(Debug)]

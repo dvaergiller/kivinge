@@ -1,3 +1,4 @@
+use crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Modifier, Style, Stylize};
 use ratatui::widgets::{
@@ -6,6 +7,10 @@ use ratatui::widgets::{
 use ratatui::{symbols, Frame};
 use std::fmt::Display;
 
+use crate::client::session::Session;
+use crate::client::Client;
+use crate::model::content::Status;
+use crate::util::open_attachment;
 use crate::{
     error::Error,
     model::content::{InboxItem, ItemDetails},
@@ -15,13 +20,16 @@ use crate::{
 use super::keymap::{read_key, KeyCommand};
 
 pub fn show(
+    client: &impl Client,
+    session: &Session,
     terminal: &mut LoadedTerminal,
     item: &InboxItem,
     details: &ItemDetails,
 ) -> Result<(), Error> {
     let mut list_state = ListState::default().with_selected(Some(0));
+    let mut owned_item = item.clone();
     loop {
-        render(terminal, item, details, &mut list_state)?;
+        render(terminal, &owned_item, details, &mut list_state)?;
         match read_key()? {
             KeyCommand::Up => {
                 let select = match list_state.selected().unwrap_or(0) {
@@ -39,10 +47,24 @@ pub fn show(
                 list_state.select(Some(select));
             }
 
+            KeyCommand::Select => {
+                let selected = list_state.selected().ok_or(Error::AppError(
+                    "No attachment selected \
+                         (this should not be possible and is a bug)",
+                ))?;
+                open_attachment(client, session, &owned_item, selected as u32)?
+            }
+
             KeyCommand::Quit | KeyCommand::Back => {
                 return Ok(());
             }
-            _ => (),
+
+            KeyCommand::Key(key) if key == KeyCode::Char('r') => {
+                client.mark_as_read(&session, &owned_item.key)?;
+                owned_item.status = Status::Read;
+            }
+
+            _ => ()
         }
     }
 }
@@ -70,8 +92,9 @@ pub fn render(
         let top_layout = Layout::default()
             .direction(ratatui::layout::Direction::Horizontal)
             .constraints(vec![
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
+                Constraint::Fill(1),
+                Constraint::Fill(1),
+                Constraint::Fill(1),
             ])
             .split(main_layout[0]);
 
@@ -88,13 +111,23 @@ pub fn render(
         let sender_widget = Paragraph::new(sender_text).block(sender_block);
         frame.render_widget(sender_widget, top_layout[0]);
 
+        let status_block = Block::new()
+            .borders(Borders::TOP | Borders::RIGHT)
+            .title("Status:")
+            .title_style(Style::new().bold());
+        let status_text =
+            if item.status == Status::Read { "Read" } else { "Unread" };
+        let status_widget = Paragraph::new(indent(2, status_text))
+            .block(status_block);
+        frame.render_widget(status_widget, top_layout[1]);
+
         let created_block = Block::new()
             .borders(Borders::TOP | Borders::RIGHT)
             .title("Created at:")
             .title_style(Style::new().bold());
         let created_text = indent(2, item.created_at.format("%Y-%m-%d %H:%M"));
         let created_widget = Paragraph::new(created_text).block(created_block);
-        frame.render_widget(created_widget, top_layout[1]);
+        frame.render_widget(created_widget, top_layout[2]);
 
         let subject_block = Block::new()
             .border_set(symbols::border::Set {
@@ -124,8 +157,7 @@ pub fn render(
         let attachments_widget = List::new(attachments)
             .block(attachments_block)
             .direction(ListDirection::TopToBottom)
-            .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
-            .highlight_symbol("> ");
+            .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
         frame.render_stateful_widget(
             attachments_widget,
             main_layout[2],
