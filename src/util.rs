@@ -22,7 +22,8 @@ pub fn load_session_or_login(
     }
 
     let mut terminal = tui::terminal::load()?;
-    match tui::login::show(&mut terminal, client)? {
+    let mut login_view = tui::login::LoginView::make(client)?;
+    match tui::show(&mut login_view, &mut terminal, None)? {
         Some(auth_response) => {
             let session = session::make(
                 auth_response.access_token,
@@ -31,7 +32,7 @@ pub fn load_session_or_login(
             session::save(&session)?;
             Ok(session)
         }
-        None => Err(Error::AppError("Login aborted")),
+        None => Err(Error::UserError("Login aborted")),
     }
 }
 

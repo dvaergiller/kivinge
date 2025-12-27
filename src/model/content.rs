@@ -44,7 +44,7 @@ pub struct InboxItem {
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
-#[serde(rename_all(deserialize="lowercase"))]
+#[serde(rename_all(deserialize = "lowercase"))]
 pub enum Status {
     Unread,
     Read,

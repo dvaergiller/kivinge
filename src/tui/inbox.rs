@@ -8,7 +8,7 @@ use ratatui::{
 
 use super::{
     inbox_item,
-    keymap::{read_key, KeyCommand},
+    keymap::{read_key, KeyEvent},
     terminal::LoadedTerminal,
 };
 use crate::{
@@ -27,11 +27,11 @@ pub fn show(
     loop {
         render(terminal, &inbox, &mut widget_state)?;
         match read_key()? {
-            KeyCommand::Quit => {
+            KeyEvent::Quit => {
                 return Ok(());
             }
 
-            KeyCommand::Up => {
+            KeyEvent::Up => {
                 let select = match widget_state.selected().unwrap_or(0) {
                     0 => 0,
                     n => n - 1,
@@ -39,7 +39,7 @@ pub fn show(
                 widget_state.select(Some(select));
             }
 
-            KeyCommand::Down => {
+            KeyEvent::Down => {
                 let select = match widget_state.selected().unwrap_or(0) {
                     n if n >= inbox.len() - 1 => n,
                     n => n + 1,
@@ -47,7 +47,7 @@ pub fn show(
                 widget_state.select(Some(select));
             }
 
-            KeyCommand::Select => match widget_state.selected() {
+            KeyEvent::Select => match widget_state.selected() {
                 None => (),
                 Some(selected) => {
                     let index = inbox.len() - 1 - selected;

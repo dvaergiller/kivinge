@@ -2,7 +2,7 @@ use crossterm::event::{Event, KeyCode};
 
 use crate::error::Error;
 
-pub enum KeyCommand {
+pub enum KeyEvent {
     Up,
     Down,
     Select,
@@ -12,30 +12,30 @@ pub enum KeyCommand {
     Unknown,
 }
 
-pub fn read_key() -> Result<KeyCommand, Error> {
+pub fn read_key() -> Result<KeyEvent, Error> {
     match crossterm::event::read()? {
         Event::Key(key) => match key.code {
             KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('p') => {
-                Ok(KeyCommand::Up)
+                Ok(KeyEvent::Up)
             }
 
             KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('n') => {
-                Ok(KeyCommand::Down)
+                Ok(KeyEvent::Down)
             }
 
             KeyCode::Enter
             | KeyCode::Right
             | KeyCode::Char('l')
-            | KeyCode::Char('f') => Ok(KeyCommand::Select),
+            | KeyCode::Char('f') => Ok(KeyEvent::Select),
 
             KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('b') => {
-                Ok(KeyCommand::Back)
+                Ok(KeyEvent::Back)
             }
 
-            KeyCode::Esc | KeyCode::Char('q') => Ok(KeyCommand::Quit),
+            KeyCode::Esc | KeyCode::Char('q') => Ok(KeyEvent::Quit),
 
-            _ => Ok(KeyCommand::Key(key.code)),
+            _ => Ok(KeyEvent::Key(key.code)),
         },
-        _ => Ok(KeyCommand::Unknown),
+        _ => Ok(KeyEvent::Unknown),
     }
 }

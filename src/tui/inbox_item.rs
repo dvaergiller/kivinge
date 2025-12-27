@@ -17,7 +17,7 @@ use crate::{
     tui::terminal::LoadedTerminal,
 };
 
-use super::keymap::{read_key, KeyCommand};
+use super::keymap::{read_key, KeyEvent};
 
 pub fn show(
     client: &impl Client,
@@ -31,7 +31,7 @@ pub fn show(
     loop {
         render(terminal, &owned_item, details, &mut list_state)?;
         match read_key()? {
-            KeyCommand::Up => {
+            KeyEvent::Up => {
                 let select = match list_state.selected().unwrap_or(0) {
                     0 => 0,
                     n => n - 1,
@@ -39,7 +39,7 @@ pub fn show(
                 list_state.select(Some(select));
             }
 
-            KeyCommand::Down => {
+            KeyEvent::Down => {
                 let select = match list_state.selected().unwrap_or(0) {
                     n if n >= details.parts.len() - 1 => n,
                     n => n + 1,
@@ -47,7 +47,7 @@ pub fn show(
                 list_state.select(Some(select));
             }
 
-            KeyCommand::Select => {
+            KeyEvent::Select => {
                 let selected = list_state.selected().ok_or(Error::AppError(
                     "No attachment selected \
                          (this should not be possible and is a bug)",
@@ -55,16 +55,16 @@ pub fn show(
                 open_attachment(client, session, &owned_item, selected as u32)?
             }
 
-            KeyCommand::Quit | KeyCommand::Back => {
+            KeyEvent::Quit | KeyEvent::Back => {
                 return Ok(());
             }
 
-            KeyCommand::Key(key) if key == KeyCode::Char('r') => {
+            KeyEvent::Key(key) if key == KeyCode::Char('r') => {
                 client.mark_as_read(&session, &owned_item.key)?;
                 owned_item.status = Status::Read;
             }
 
-            _ => ()
+            _ => (),
         }
     }
 }
@@ -117,8 +117,8 @@ pub fn render(
             .title_style(Style::new().bold());
         let status_text =
             if item.status == Status::Read { "Read" } else { "Unread" };
-        let status_widget = Paragraph::new(indent(2, status_text))
-            .block(status_block);
+        let status_widget =
+            Paragraph::new(indent(2, status_text)).block(status_block);
         frame.render_widget(status_widget, top_layout[1]);
 
         let created_block = Block::new()
