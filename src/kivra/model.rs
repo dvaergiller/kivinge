@@ -1,6 +1,9 @@
 use serde::{Serialize, Deserialize};
-use time::OffsetDateTime;
+use time::{macros::format_description, OffsetDateTime};
 use rust_decimal::Decimal;
+use std::collections::BTreeMap;
+
+pub type UserId = String;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
@@ -62,39 +65,56 @@ pub struct AuthTokenResponse {
     pub token_type: String,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct ContentLabels {
-    pub viewed: bool,
-    pub trashed: bool,
-    pub agreement: bool,
-    pub paid: bool
-}
-
 pub type ContentKey = String;
 pub type SenderKey = String;
 pub type AgreementKey = String;
+pub type ContentLabels = BTreeMap<String, bool>;
+
+#[derive(Deserialize, Debug)]
+pub struct DateTime(
+    #[serde(with = "time::serde::rfc3339")]
+    pub OffsetDateTime);
+
+#[derive(Debug)]
+pub struct Date(pub time::Date);
+
+impl<'a> Deserialize<'a> for Date {
+    fn deserialize<Des: serde::Deserializer<'a>>(d: Des) ->
+        Result<Date, Des::Error>
+    {
+        let mut date_string = String::deserialize(d)?.clone();
+        let _ = date_string.split_off(10);
+        let format = format_description!("[year]-[month]-[day]");
+        let date = time::Date::parse(&date_string, &format)
+            .map_err(serde::de::Error::custom)?;
+        Ok(Date(date))
+    }
+}
+
 
 #[derive(Deserialize, Debug)]
 pub struct ContentSpec {
     pub key: ContentKey,
     pub sender: SenderKey,
     pub sender_name: String,
-    pub created_at: OffsetDateTime,
-    pub generated_at: OffsetDateTime,
+    pub created_at: DateTime,
+    // This can be empty. Let's worry about that if we need the field:
+    // pub generated_at: DateTime,
     pub subject: String,
     pub status: String, // Might be an enum later
     pub labels: ContentLabels,
-    pub indexed_at: OffsetDateTime,
+    pub indexed_at: DateTime,
+    #[serde(default)]
     pub payable: bool,
-    pub amount: Decimal,
-    pub input_amount: Decimal, // Unsure what this refers to
-    pub currency: String,
+    pub amount: Option<Decimal>,
+    pub input_amount: Option<Decimal>, // Unsure what this refers to
+    pub currency: Option<String>,
     pub payment_status: Option<String>,
-    pub pay_date: Option<OffsetDateTime>,
-    pub due_date: Option<OffsetDateTime>,
+    pub pay_date: Option<Date>,
+    pub due_date: Option<Date>,
     pub agreement_key: Option<AgreementKey>,
     pub agreement_status: Option<String>,
-    pub variable_amount: bool,
+    pub variable_amount: Option<bool>,
     #[serde(rename = "type")]
     pub content_type: String,
     pub has_multiple_options: bool,

@@ -74,7 +74,7 @@ pub fn get_inbox_listing(client: &Client,
     Result<Vec<ContentSpec>, Error>
 {
     Ok(client.get(format!("{API_URL}/v3/user/{user_id}/content"))
-       .query(&["listing", "all"])
+       .query(&[("listing", "all")])
        .bearer_auth(access_token)
        .send()?
        .json()?)
