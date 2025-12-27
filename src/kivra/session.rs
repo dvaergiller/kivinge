@@ -41,11 +41,11 @@ impl TryInto<Session> for StoredSession {
     }
 }
 
-impl Into<StoredSession> for Session {
-    fn into(self) -> StoredSession {
+impl From<Session> for StoredSession {
+    fn from(session: Session) -> StoredSession {
         StoredSession {
-            access_token: self.access_token,
-            id_token: self.id_token,
+            access_token: session.access_token,
+            id_token: session.id_token,
         }
     }
 }
@@ -88,7 +88,7 @@ pub fn make(access_token: String, id_token: String) -> Result<Session, Error> {
     Ok(Session { user_info, access_token, id_token })
 }
 
-fn extract_user_info(id_token: &String) -> Result<UserInfo, Error>
+fn extract_user_info(id_token: &str) -> Result<UserInfo, Error>
 {
     let sections = id_token.split('.').collect::<Vec<&str>>();
     let claims_base64 = sections.get(1).ok_or(Error::AppError(

@@ -57,7 +57,7 @@ fn load_session_or_login(client: &request::Client) ->
         return Ok(session);
     }
 
-    let auth_response = login(&client)?;
+    let auth_response = login(client)?;
     let session = session::make(auth_response.access_token,
                                 auth_response.id_token)?;
     session::save(&session)?;
@@ -67,21 +67,21 @@ fn load_session_or_login(client: &request::Client) ->
 fn login(client: &request::Client) ->
     Result<AuthTokenResponse, Error>
 {
-    let config = request::get_config(&client)?;
+    let config = request::get_config(client)?;
     let mut terminal = terminal::load()?;
-    let (verifier, auth_resp) = request::start_auth(&client, &config)?;
+    let (verifier, auth_resp) = request::start_auth(client, &config)?;
     let qrcode = qr::encode(&auth_resp.qr_code)?;
 
     terminal.clear()?;
     terminal.draw(|f| ui_show_login_qr_code(f, &qrcode))?;
 
     loop {
-        let mut status = request::check_auth(&client, &auth_resp.next_poll_url)?;
+        let mut status = request::check_auth(client, &auth_resp.next_poll_url)?;
 
         match (status.retry_after, &status.next_poll_url, &status.ssn) {
             (Some(retry_after), Some(next_poll_url), _) => {
                 sleep(std::time::Duration::from_secs(retry_after.into()));
-                status = request::check_auth(&client, &next_poll_url)?;
+                status = request::check_auth(client, next_poll_url)?;
                 let qrcode = qr::encode(&status.qr_code)?;
                 terminal.draw(|f| ui_show_login_qr_code(f, &qrcode))?;
             }
@@ -98,11 +98,11 @@ fn login(client: &request::Client) ->
     }
 }
 
-fn ui_show_login_qr_code(frame: &mut prelude::Frame, qr_code: &String) {
+fn ui_show_login_qr_code(frame: &mut prelude::Frame, qr_code: &str) {
     let title = "Authenticate with BankID";
     let block = widgets::Block::default()
         .title(title)
         .borders(widgets::Borders::ALL);
-    let paragraph = widgets::Paragraph::new(qr_code.clone()).block(block);
+    let paragraph = widgets::Paragraph::new(qr_code).block(block);
     frame.render_widget(paragraph, frame.size());
 }
