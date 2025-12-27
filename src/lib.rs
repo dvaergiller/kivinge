@@ -3,3 +3,4 @@ pub mod client;
 pub mod error;
 pub mod model;
 pub mod tui;
+pub mod util;
