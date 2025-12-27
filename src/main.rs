@@ -138,7 +138,8 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
                 attachment_num,
                 download_dir,
             )?;
-            Ok(println!("{}", full_path.to_string_lossy()))
+            println!("{}", full_path.to_string_lossy());
+            Ok(())
         }
 
         Command::Open { item_id, attachment_num } => {
