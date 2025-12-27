@@ -14,6 +14,7 @@ use kivinge::{
         Client,
     },
     error::Error,
+    fuse,
     model::content::InboxItem,
     tui::{self, inbox_item::ItemViewResult, terminal::LoadedTerminal},
     util::{
@@ -65,6 +66,9 @@ enum Command {
 
     #[command(about = "Start interactive terminal UI")]
     Tui,
+
+    #[command(about = "Mount inbox as FUSE filesystem")]
+    Mount { mountpoint: PathBuf },
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -75,6 +79,8 @@ enum CompletionsShell {
 }
 
 fn main() {
+    tracing_subscriber::fmt::init();
+
     let cli_args = CliArgs::parse();
     match run(cli_args) {
         Ok(()) => (),
@@ -162,6 +168,11 @@ fn run(cli_args: CliArgs) -> Result<(), Error> {
             let mut terminal = tui::terminal::load()?;
             show_inbox_tui(&mut terminal, &client, &session)?;
             Ok(())
+        }
+
+        Command::Mount { mountpoint } => {
+            let session = load_session_or_login(&client)?;
+            fuse::mount(&client, &session, mountpoint.as_path())
         }
     }
 }

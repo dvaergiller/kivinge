@@ -43,6 +43,18 @@ pub struct InboxItem {
     // pub form: //null
 }
 
+impl InboxItem {
+    pub fn name(&self) -> String {
+        format!(
+            "{}-{}-{}",
+            self.created_at.to_rfc3339(),
+            self.sender_name,
+            self.subject
+        )
+        .replace(' ', "_")
+    }
+}
+
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all(deserialize = "lowercase"))]
 pub enum Status {
@@ -56,6 +68,7 @@ pub struct InboxEntry {
     pub item: InboxItem,
 }
 
+#[derive(Default)]
 pub struct InboxListing(Vec<InboxEntry>);
 
 impl Deref for InboxListing {
