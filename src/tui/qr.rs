@@ -1,4 +1,4 @@
-use qrcode::{EcLevel, QrCode, Version, render::braille::BraillePixel};
+use qrcode::{render::braille::BraillePixel, EcLevel, QrCode, Version};
 
 use super::Error;
 
