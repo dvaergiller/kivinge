@@ -1,18 +1,18 @@
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     prelude,
-    style::Color,
+    style::{Color, Style},
     widgets::Paragraph,
 };
 use std::time::Duration;
 
-const QR_BRANDING: &str =
-    concat!(
-        " ▄▄  ▄▄ \n",
-        " ██▄█▀  \n",
-        " ██▀█▄  \n",
-        " ▀▀  ▀▀ \n",
-    );
+#[rustfmt::skip]
+const QR_BRANDING: &str = concat!(
+    " ▄▄  ▄▄ \n",
+    " ██▄█▀  \n",
+    " ██▀█▄  \n",
+    " ▀▀  ▀▀ \n",
+);
 
 use super::{keymap::KeyEvent, qr, Command, Error, Event, TuiView};
 use crate::{
@@ -109,6 +109,28 @@ impl<'a, C: Client> TuiView for LoginView<'a, C> {
     fn render(&mut self, frame: &mut prelude::Frame, rect: Rect) {
         let qr = qr::encode(&self.qr_code).unwrap();
         let qr_height = qr.lines().count() as u16;
+        let qr_width =
+            qr.lines().next().unwrap_or_default().chars().count() as u16;
+
+        // Need space for: title (2) + QR + quit message (1) + margins (4)
+        let min_height = qr_height + 7;
+        let min_width = qr_width;
+
+        if rect.height < min_height || rect.width < min_width {
+            let msg = format!(
+                "Terminal too small for QR code\n\n\
+                 Current: {}x{}\n\
+                 Minimum: {}x{}\n\n\
+                 Press 'q' to abort",
+                rect.width, rect.height, min_width, min_height
+            );
+            frame.render_widget(
+                Paragraph::new(msg).alignment(Alignment::Center),
+                rect,
+            );
+            return;
+        }
+
         let margin_top = (rect.height - qr_height) / 2;
 
         let layout = Layout::default()
