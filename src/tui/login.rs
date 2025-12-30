@@ -127,10 +127,14 @@ impl<'a, C: Client> TuiView for LoginView<'a, C> {
                 .alignment(Alignment::Center),
             layout[1],
         );
-        frame.render_widget(
-            Paragraph::new(qr).alignment(Alignment::Center),
-            layout[2],
-        );
+        let qr_style = Style::default().fg(Color::White).bg(Color::Black);
+        let qr_rect = Rect {
+            x: layout[2].x + (layout[2].width.saturating_sub(qr_width)) / 2,
+            y: layout[2].y,
+            width: qr_width,
+            height: qr_height,
+        };
+        frame.render_widget(Paragraph::new(qr).style(qr_style), qr_rect);
 
         let branding_height = QR_BRANDING.lines().count() as u16;
         let branding_width =
