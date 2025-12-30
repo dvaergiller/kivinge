@@ -5,63 +5,13 @@ on:
     tags:
       - 'v*'
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  build-linux:
-    name: Build Linux Binary
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libfuse3-dev libssl-dev pkg-config
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build release binary
-        run: cargo build --release
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: kivinge-linux-x86_64
-          path: target/release/kivinge
-
-  build-macos:
-    name: Build macOS Binary
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: brew install macfuse pkg-config
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build release binary
-        run: cargo build --release
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: kivinge-macos-arm64
-          path: target/release/kivinge
+  build:
+    uses: ./.github/workflows/build.yml
 
   release:
     name: Create Release
-    needs: [build-linux, build-macos]
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
