@@ -1,6 +1,6 @@
+use super::Error;
 use qrcode2::{EcLevel, QrCode, Version};
 use qrcode_unicode_ext::BraillePixel;
-use super::Error;
 
 pub fn encode(code_data: &String) -> Result<String, Error> {
     let code =
