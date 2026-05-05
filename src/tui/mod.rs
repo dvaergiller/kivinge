@@ -23,7 +23,7 @@ pub mod terminal;
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("QR code generation failed: {0}")]
-    QRError(#[from] qrcode::types::QrError),
+    QRError(#[from] qrcode2::types::QrError),
 
     #[error("IO error encountered: {0}")]
     IOError(#[from] std::io::Error),
